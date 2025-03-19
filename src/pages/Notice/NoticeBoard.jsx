@@ -1,47 +1,67 @@
-import { Button, Card, Form, Table, Pagination } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react"; // useEffect 추가
-import Navbar from "../components/include/Navbar";
+import { Button, Card, Form, Table, Pagination } from "react-bootstrap";
+import { getNotices } from '../../services/api';
 import "./NoticeBoard.css";
+import Header from "../../components/include/Header";
 
-const NoticeBoard = ({ notices }) => {
+const NoticeBoard = () => {
   const navigate = useNavigate();
+  const [notices, setNotices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isAdmin, setIsAdmin] = useState(false); // 관리자 권한 상태 추가
+  const [isAdmin, setIsAdmin] = useState(false);
   const itemsPerPage = 10;
 
-  // 사용자 권한 확인 로직 추가
+  // 공지사항 데이터 로드
   useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        setLoading(true);
+        const response = await getNotices();
+        setNotices(response.data);
+        setLoading(false);
+      } catch (error) {
+        console.error("공지사항 조회 중 오류:", error);
+        setError("공지사항을 불러오는 중 오류가 발생했습니다.");
+        setLoading(false);
+      }
+    };
+
+    // 관리자 권한 확인
     const checkUserRole = () => {
       const userRole = localStorage.getItem("role");
       setIsAdmin(userRole === "ADMIN");
     };
+
+    fetchNotices();
     checkUserRole();
   }, []);
 
-  // 검색어에 맞는 공지사항 필터링
+  // 로딩 및 에러 상태 처리
+  if (loading) return <div>로딩 중...</div>;
+  if (error) return <div>{error}</div>;
+
+  // 검색 및 페이지네이션 로직 (기존 코드 유지)
   const filteredNotices = notices.filter((notice) =>
     notice.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 페이지네이션을 위한 페이지 데이터 계산
   const indexOfLastNotice = currentPage * itemsPerPage;
   const indexOfFirstNotice = indexOfLastNotice - itemsPerPage;
   const currentNotices = filteredNotices.slice(indexOfFirstNotice, indexOfLastNotice);
 
-  // 페이지 변경 핸들러
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  // 페이지네이션 버튼 생성
   const pageNumbers = [];
   for (let i = 1; i <= Math.ceil(filteredNotices.length / itemsPerPage); i++) {
     pageNumbers.push(i);
   }
 
-  // 글쓰기 버튼 클릭 핸들러 수정
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   const moveInsert = () => {
     if (!isAdmin) {
       alert("공지사항 작성 권한이 없습니다. 관리자만 작성할 수 있습니다.");
@@ -52,7 +72,7 @@ const NoticeBoard = ({ notices }) => {
 
   return (
     <>
-      <Navbar />
+      <Header />
       <div className="notice-container">
         <Card className="notice-card shadow-lg p-4">
           <Card.Body className="d-flex flex-column flex-grow-1">

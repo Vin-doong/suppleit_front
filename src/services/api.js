@@ -111,6 +111,31 @@ export const naverLogin = async (code, state) => {
   return api.post("/social/login/naver", { code, state });
 };
 
+// 공지사항 목록 조회
+export const getNotices = async () => {
+  return api.get("/notice");
+};
+
+// 특정 공지사항 조회
+export const getNoticeById = async (id) => {
+  return api.get(`/notice/${id}`);
+};
+
+// 공지사항 생성
+export const createNotice = async (noticeData) => {
+  return api.post("/notice", noticeData);
+};
+
+// 공지사항 수정
+export const updateNotice = async (id, noticeData) => {
+  return api.put(`/notice/${id}`, noticeData);
+};
+
+// 공지사항 삭제
+export const deleteNotice = async (id) => {
+  return api.delete(`/notice/${id}`);
+};
+
 // 제품 리스트 가져오기
 export const getProducts = async () => {
   return api.get("/products");

@@ -1,59 +1,61 @@
-import React, { useState, useEffect } from "react"; // useEffect 추가
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
-import { useNavigate } from "react-router-dom";
-import Navbar from "../components/include/Navbar";
+import { createNotice } from '../../services/api';
 
-const NoticeBoardInsert = ({ onSubmit }) => {
+const NoticeBoardInsert = () => {
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false); // 관리자 권한 상태 추가
+  const [isAdmin, setIsAdmin] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [author] = useState("관리자");
   const [file, setFile] = useState(null);
 
-    // 사용자 권한 확인 및 리디렉션 로직 추가
-    useEffect(() => {
-      const checkUserRole = () => {
-        const userRole = localStorage.getItem("role");
-        const isAdmin = userRole === "ADMIN";
-        setIsAdmin(isAdmin);
-  
-        // 관리자가 아닌 경우 목록 페이지로 리디렉션
-        if (!isAdmin) {
-          alert("공지사항 작성 권한이 없습니다. 관리자만 작성할 수 있습니다.");
-          navigate("/notices");
-        }
-      };
-      
-      checkUserRole();
-    }, [navigate]);
+  useEffect(() => {
+    const checkUserRole = () => {
+      const userRole = localStorage.getItem("role");
+      const isAdmin = userRole === "ADMIN";
+      setIsAdmin(isAdmin);
+
+      if (!isAdmin) {
+        alert("공지사항 작성 권한이 없습니다. 관리자만 작성할 수 있습니다.");
+        navigate("/notices");
+      }
+    };
+    
+    checkUserRole();
+  }, [navigate]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 입력하세요!");
       return;
     }
 
-    const newNotice = {
-      id: Date.now(),
-      title,
-      content,  
-      author,
-      views: 0,
-      date: new Date().toISOString().split("T")[0],
-      file: file ? URL.createObjectURL(file) : null,
-    };
+    try {
+      const noticeData = {
+        title,
+        content,
+        file
+      };
 
-    onSubmit(newNotice);
-    navigate("/notices");
+      await createNotice(noticeData);
+      
+      alert("공지사항이 성공적으로 등록되었습니다.");
+      navigate("/notices");
+    } catch (error) {
+      console.error("공지사항 등록 중 오류:", error);
+      alert("공지사항 등록 중 오류가 발생했습니다.");
+    }
   };
+
 
   const modules = {
     toolbar: [
@@ -69,10 +71,8 @@ const NoticeBoardInsert = ({ onSubmit }) => {
     return null;
   }
 
-
   return (
     <>
-      <Navbar />
       <div style={{ backgroundColor: "#c0ebe5", padding: "20px", minHeight: "100vh" }}>
         <Container style={{ marginTop: "50px" }}>
           <Card className="p-4 shadow-lg">
@@ -90,7 +90,7 @@ const NoticeBoardInsert = ({ onSubmit }) => {
 
               <Form.Group className="mb-3">
                 <Form.Label>작성자</Form.Label>
-                <Form.Control type="text" value={author} readOnly />
+                <Form.Control type="text" readOnly /> {/* 이거 봐야됨 0319 작성자가 누군지 확인해야되는거 */}
               </Form.Group>
 
               <Form.Group className="mb-3">

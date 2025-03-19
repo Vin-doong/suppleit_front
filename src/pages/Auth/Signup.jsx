@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, ButtonGroup, ToggleButton, Modal } from "react-bootstrap";
 import "./Signup.css";
-import Navbar from "../components/include/Navbar";
-import { signup } from '../services/api';
+import { signup } from '../../services/api';
 
 const Signup = () => {
   //회원가입 데이터 
@@ -70,7 +69,6 @@ const Signup = () => {
 
   return (
     <>
-    <Navbar />
     <div className="signup-page">
       <Container className="signup-container">
         <Row className="justify-content-md-center">

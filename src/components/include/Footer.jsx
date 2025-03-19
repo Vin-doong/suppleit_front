@@ -1,9 +1,11 @@
 import React from 'react';
 
 const Footer = () => {
+ console.log("Footer Loaded!");
+
   return (
     <footer className="bg-white mt-auto">
-      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Footer Sections */}
         <div className="grid grid-cols-4 gap-8 mb-8">
           <div>
