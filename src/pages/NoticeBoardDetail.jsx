@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // useEffect 추가
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Card, Button, Row, Col } from "react-bootstrap";
 import Navbar from "../components/include/Navbar";
@@ -6,7 +6,16 @@ import Navbar from "../components/include/Navbar";
 const NoticeBoardDetail = ({ notices }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false); // 기본값 false로 변경
+
+  // 사용자 권한 확인 로직 추가
+  useEffect(() => {
+    const checkUserRole = () => {
+      const userRole = localStorage.getItem("role");
+      setIsAdmin(userRole === "ADMIN");
+    };
+    checkUserRole();
+  }, []);
 
   const notice = notices.find((n) => n.id === parseInt(id));
 
@@ -49,7 +58,7 @@ const NoticeBoardDetail = ({ notices }) => {
             </div>
           )}
 
-          {/* ✅ 버튼 간격 조정 */}
+          {/* 수정/삭제 버튼 - 관리자만 표시 */}
           <Row className="mt-4">
             <Col>
               <Button variant="secondary" onClick={() => navigate("/notices")}>

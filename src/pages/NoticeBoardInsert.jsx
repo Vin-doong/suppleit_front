@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react"; // useEffect 추가
 import { Container, Form, Button, Card } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -7,10 +7,28 @@ import Navbar from "../components/include/Navbar";
 
 const NoticeBoardInsert = ({ onSubmit }) => {
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false); // 관리자 권한 상태 추가
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState(""); 
+  const [content, setContent] = useState("");
   const [author] = useState("관리자");
   const [file, setFile] = useState(null);
+
+    // 사용자 권한 확인 및 리디렉션 로직 추가
+    useEffect(() => {
+      const checkUserRole = () => {
+        const userRole = localStorage.getItem("role");
+        const isAdmin = userRole === "ADMIN";
+        setIsAdmin(isAdmin);
+  
+        // 관리자가 아닌 경우 목록 페이지로 리디렉션
+        if (!isAdmin) {
+          alert("공지사항 작성 권한이 없습니다. 관리자만 작성할 수 있습니다.");
+          navigate("/notices");
+        }
+      };
+      
+      checkUserRole();
+    }, [navigate]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -46,6 +64,11 @@ const NoticeBoardInsert = ({ onSubmit }) => {
       ["clean"],
     ],
   };
+  // 관리자가 아닌 경우 작성 페이지 렌더링 방지
+  if (!isAdmin) {
+    return null;
+  }
+
 
   return (
     <>

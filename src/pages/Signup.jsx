@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Form, Button, Container, Row, Col, ButtonGroup, ToggleButton, Modal } from "react-bootstrap";
 import "./Signup.css";
-import Header from "../components/include/Header";
 import Navbar from "../components/include/Navbar";
+import { signup } from '../services/api';
 
 const Signup = () => {
   //회원가입 데이터 
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,18 +26,44 @@ const Signup = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
       alert("비밀번호가 일치하지 않습니다.");
       return;
     }
+    
     if (!formData.termsAgreed) {
       alert("약관에 동의해야 합니다.");
       return;
     }
-    console.log("회원가입 정보:", formData);
-    alert("회원가입 성공!");
+    
+    try {
+      // 백엔드로 전송할 회원가입 데이터 준비
+      const userData = {
+        email: formData.email,
+        password: formData.password,
+        nickname: formData.nickname,
+        gender: formData.gender === "남자" ? "MALE" : "FEMALE",
+        birth: formData.birthDate,
+        memberRole: "USER",
+        socialType: "NONE"
+      };
+      
+      // API 호출하여 회원가입 요청
+      const response = await signup(userData);
+      
+      if (response.data && response.data.success) {
+        alert("회원가입에 성공했습니다!");
+        navigate('/login'); // 로그인 페이지로 이동
+      } else {
+        alert(response.data.message || "회원가입에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("회원가입 오류:", error);
+      alert(error.response?.data?.message || "회원가입 중 오류가 발생했습니다.");
+    }
   };
 
   const [showModal, setShowModal] = useState(false);

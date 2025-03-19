@@ -1,14 +1,24 @@
 import { Button, Card, Form, Table, Pagination } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // useEffect 추가
 import Navbar from "../components/include/Navbar";
 import "./NoticeBoard.css";
 
 const NoticeBoard = ({ notices }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1); // 현재 페이지 상태
-  const itemsPerPage = 10; // 페이지 당 보여줄 공지사항 수
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isAdmin, setIsAdmin] = useState(false); // 관리자 권한 상태 추가
+  const itemsPerPage = 10;
+
+  // 사용자 권한 확인 로직 추가
+  useEffect(() => {
+    const checkUserRole = () => {
+      const userRole = localStorage.getItem("role");
+      setIsAdmin(userRole === "ADMIN");
+    };
+    checkUserRole();
+  }, []);
 
   // 검색어에 맞는 공지사항 필터링
   const filteredNotices = notices.filter((notice) =>
@@ -31,7 +41,12 @@ const NoticeBoard = ({ notices }) => {
     pageNumbers.push(i);
   }
 
+  // 글쓰기 버튼 클릭 핸들러 수정
   const moveInsert = () => {
+    if (!isAdmin) {
+      alert("공지사항 작성 권한이 없습니다. 관리자만 작성할 수 있습니다.");
+      return;
+    }
     navigate("/newnotice");
   };
 
@@ -142,22 +157,24 @@ const NoticeBoard = ({ notices }) => {
               </Pagination>
             </div>
 
-            {/* 글쓰기 버튼 */}
-            <div className="notice-button-container text-center">
-              <Button
-                className="notice-write-button"
-                onClick={moveInsert}
-                style={{
-                  backgroundColor: "#0d9488",
-                  borderColor: "#0d9488",
-                  borderRadius: "30px",
-                  padding: "0.5rem 2rem",
-                  fontSize: "1.1rem",
-                }}
-              >
-                글쓰기
-              </Button>
-            </div>
+            {/* 글쓰기 버튼 - 관리자만 표시 */}
+            {isAdmin && (
+              <div className="notice-button-container text-center">
+                <Button
+                  className="notice-write-button"
+                  onClick={moveInsert}
+                  style={{
+                    backgroundColor: "#0d9488",
+                    borderColor: "#0d9488",
+                    borderRadius: "30px",
+                    padding: "0.5rem 2rem",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  글쓰기
+                </Button>
+              </div>
+            )}
           </Card.Body>
         </Card>
       </div>

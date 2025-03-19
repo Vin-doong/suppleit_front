@@ -8,17 +8,34 @@ import Navbar from "../components/include/Navbar";
 const NoticeBoardEdit = ({ notices }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false); // 관리자 권한 상태 추가
   const notice = notices.find((n) => n.id === parseInt(id));
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
+// 사용자 권한 확인 및 리디렉션 로직 추가
   useEffect(() => {
+    const checkUserRole = () => {
+      const userRole = localStorage.getItem("role");
+      const isAdmin = userRole === "ADMIN";
+      setIsAdmin(isAdmin);
+
+      // 관리자가 아닌 경우 목록 페이지로 리디렉션
+      if (!isAdmin) {
+        alert("공지사항 수정 권한이 없습니다. 관리자만 수정할 수 있습니다.");
+        navigate("/notices");
+      }
+    };
+    
+    checkUserRole();
+    
+    // 공지사항 데이터 로드
     if (notice) {
       setTitle(notice.title);
       setContent(notice.content);
     }
-  }, [notice]);
+  }, [notice, navigate]);
 
   if (!notice) {
     return (
@@ -49,6 +66,11 @@ const NoticeBoardEdit = ({ notices }) => {
     alert("수정된 내용이 저장되었습니다! (실제 저장 기능 추가 예정)");
     navigate(`/notices/${id}`);
   };
+  
+  // 관리자가 아닌 경우 수정 페이지 렌더링 방지
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <>
