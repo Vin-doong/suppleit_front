@@ -1,41 +1,123 @@
-import React, { useState } from 'react';
-import './login.css';  // CSS 파일을 import
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './login.css';
+import axios from 'axios';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    if (!username || !password) {
-      setIsPopupVisible(true);
-    } else {
-      setIsPopupVisible(false);
-      console.log('로그인 시도:', username, password);
+  // 일반 로그인 처리 함수
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log("로그인 시도:", email, password);
+
+      // 백엔드 API 호출
+      const response = await axios.post('http://localhost:8000/api/auth/login', {
+        email,
+        password
+      });
+
+      console.log("로그인 응답:", response.data);
+
+      // 로그인 성공한 경우
+      if (response.data.accessToken) {
+        // 토큰 저장
+        localStorage.setItem('accessToken', response.data.accessToken);
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+        
+        // 로그인 상태 업데이트를 위한 이벤트 발생
+        window.dispatchEvent(new Event('storage'));
+        
+        // 홈페이지로 이동
+        navigate('/');
+      } else {
+        setError('로그인에 실패했습니다. 응답에 토큰이 없습니다.');
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      setError(
+        error.response?.data?.message || 
+        '로그인 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
+  // 구글 로그인 처리 함수
+  const handleGoogleLogin = async () => {
+    try {
+      setIsLoading(true);
+      
+      // 구글 OAuth URL로 리디렉션
+      const clientId = '286893397263-o0opr0c1et57me60o8sq5ccdf836js75.apps.googleusercontent.com'; // application.yml에서 가져온 값
+      const redirectUri = encodeURIComponent('http://localhost:3000/callback/google');
+      const scope = encodeURIComponent('email profile');
+      const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
+      
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('구글 로그인 오류:', error);
+      setError('구글 로그인 처리 중 오류가 발생했습니다.');
+      setIsLoading(false);
+    }
+  };
+
+  // 네이버 로그인 처리 함수
+  const handleNaverLogin = async () => {
+    try {
+      setIsLoading(true);
+      
+      // 네이버 OAuth URL로 리디렉션
+      const clientId = 'M_qS71BqoG7oESo3_thQ'; // application.yml에서 가져온 값
+      const redirectUri = encodeURIComponent('http://localhost:3000/callback/naver');
+      const state = Math.random().toString(36).substr(2, 11);
+      
+      // CSRF 보호를 위해 state 저장
+      localStorage.setItem('naverState', state);
+      
+      const authUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+      
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('네이버 로그인 오류:', error);
+      setError('네이버 로그인 처리 중 오류가 발생했습니다.');
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="login-container"
-  style={{
-    backgroundImage: "url('/images/back.jpg')",
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-  }}
->
+      style={{
+        backgroundImage: "url('/images/back.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <div className="login-box">
         <h2>로그인</h2>
 
+        {error && <div className="error-message" style={{ color: 'red', marginBottom: '15px' }}>{error}</div>}
+
         <div className="input-group">
-          <label htmlFor="username">아이디</label>
+          <label htmlFor="email">이메일</label>
           <input
-            type="text"
-            id="username"
-            placeholder="아이디를 입력하세요"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            id="email"
+            placeholder="이메일을 입력하세요"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
 
@@ -47,45 +129,31 @@ const Login = () => {
             placeholder="비밀번호를 입력하세요"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
           />
         </div>
 
-        <button className="login-button" onClick={handleLogin}>로그인</button>
+        <button 
+          className="login-button" 
+          onClick={handleLogin}
+          disabled={isLoading}
+        >
+          {isLoading ? '로그인 중...' : '로그인'}
+        </button>
 
         <div className="signup-link">
-          <p>계정이 없으신가요? <a href="#">회원가입</a></p>
+          <p>계정이 없으신가요? <a href="/signup">회원가입</a></p>
         </div>
 
-        {/* 구글, 카카오, 네이버 로그인 PNG 버튼 */}
-        <div className="social-login" style={{border: 'none' }}>
-          <button className="social-button google">
-            <a href="https://accounts.google.com/ServiceLogin" target="_blank" rel="noopener noreferrer">
-              <img src="/images/Google.png" alt="구글 로그인" className="social-icon" />
-            </a>
+        {/* 소셜 로그인 버튼 */}
+        <div className="social-login">
+          <button className="social-button google" onClick={handleGoogleLogin} disabled={isLoading}>
+            <img src="/images/Google.png" alt="구글 로그인" className="social-icon" />
           </button>
-          <button className="social-button kakao">
-            <a href="https://accounts.kakao.com/login/?continue=https%3A%2F%2Faccounts.kakao.com%2Fweblogin%2Faccount#login" target="_blank" rel="noopener noreferrer">
-              <img src="/images/kakao.png" alt="카카오 로그인" className="social-icon" />
-            </a>
+          <button className="social-button naver" onClick={handleNaverLogin} disabled={isLoading}>
+            <img src="/images/Naver.png" alt="네이버 로그인" className="social-icon" />
           </button>
-          <button className="social-button naver">  {/* 네이버 버튼에 개별 클래스 추가 */}
-    <a href="https://nid.naver.com/nidlogin.login" target="_blank" rel="noopener noreferrer">
-      <img src="/images/Naver.png" alt="네이버 로그인" className="social-icon" />
-    </a>
-  </button>
-</div>
-
-        {/* 팝업 모달 */}
-        {isPopupVisible && (
-          <div className="popup-overlay">
-            <div className="popup-message">
-              <p>아이디와 비밀번호를 입력해주세요.</p>
-              <button onClick={() => setIsPopupVisible(false)} className="popup-close-button">
-                닫기
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

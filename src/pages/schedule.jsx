@@ -3,7 +3,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import Header from "../components/include/Header";
-import "./schedule.css";
+import "./Schedule.css";
 const Schedule = () => {
   const [events, setEvents] = useState([
     { title: "회의", date: "2025-03-15" },
