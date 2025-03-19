@@ -1,5 +1,4 @@
 html, body {
-  overflow: hidden !important;  /* ✅ 스크롤 강제 제거 */
   height: 100vh;  /* ✅ 전체 높이 제한 */
   margin: 0;
   padding: 0;
