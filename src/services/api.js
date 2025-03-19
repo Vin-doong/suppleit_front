@@ -103,12 +103,12 @@ export const checkNickname = async (nickname) => {
 };
 
 // 소셜 로그인 API
-export const googleLogin = async (accessToken) => {
-  return api.post("/social/login/google", null, { params: { accessToken } });
+export const googleLogin = async (code) => {
+  return api.post("/social/login/google", { code });
 };
 
-export const naverLogin = async (accessToken) => {
-  return api.post("/social/login/naver", null, { params: { accessToken } });
+export const naverLogin = async (code, state) => {
+  return api.post("/social/login/naver", { code, state });
 };
 
 // 제품 리스트 가져오기

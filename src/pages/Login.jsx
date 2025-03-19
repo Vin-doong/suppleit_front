@@ -55,16 +55,17 @@ const Login = () => {
   };
 
   // 구글 로그인 처리 함수
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     try {
       setIsLoading(true);
       
       // 구글 OAuth URL로 리디렉션
-      const clientId = '286893397263-o0opr0c1et57me60o8sq5ccdf836js75.apps.googleusercontent.com'; // application.yml에서 가져온 값
+      const clientId = '286893397263-o0opr0c1et57me60o8sq5ccdf836js75.apps.googleusercontent.com';
       const redirectUri = encodeURIComponent('http://localhost:3000/callback/google');
       const scope = encodeURIComponent('email profile');
       const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
       
+      console.log('구글 로그인 URL로 이동:', authUrl);
       window.location.href = authUrl;
     } catch (error) {
       console.error('구글 로그인 오류:', error);
@@ -74,20 +75,23 @@ const Login = () => {
   };
 
   // 네이버 로그인 처리 함수
-  const handleNaverLogin = async () => {
+  const handleNaverLogin = () => {
     try {
       setIsLoading(true);
       
       // 네이버 OAuth URL로 리디렉션
-      const clientId = 'M_qS71BqoG7oESo3_thQ'; // application.yml에서 가져온 값
+      const clientId = 'M_qS71BqoG7oESo3_thQ';
       const redirectUri = encodeURIComponent('http://localhost:3000/callback/naver');
-      const state = Math.random().toString(36).substr(2, 11);
+      const state = [...Array(30)].map(() => (~~(Math.random() * 36)).toString(36)).join('');
       
       // CSRF 보호를 위해 state 저장
-      localStorage.setItem('naverState', state);
+      sessionStorage.setItem('naverState', state);
       
-      const authUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;
+      // URL에 state 파라미터 추가 - localStorage 사용하지 않음
+      const authUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}`;      
       
+      console.log('네이버 로그인 URL로 이동:', authUrl);
+      console.log('네이버 상태 값 저장:', state);
       window.location.href = authUrl;
     } catch (error) {
       console.error('네이버 로그인 오류:', error);

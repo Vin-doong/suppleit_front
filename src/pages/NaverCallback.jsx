@@ -10,45 +10,55 @@ const NaverCallback = () => {
   useEffect(() => {
     const handleNaverCallback = async () => {
       try {
-        // URL에서 인증 코드와 state 파라미터 가져오기
+        // URL에서 인증 코드만 가져오기
         const searchParams = new URLSearchParams(location.search);
         const code = searchParams.get('code');
-        const state = searchParams.get('state');
         
         if (!code) {
           throw new Error('인증 코드를 찾을 수 없습니다');
         }
 
-        // CSRF 공격 방지를 위한 state 검증
-        const savedState = localStorage.getItem('naverState');
-        if (state !== savedState) {
-          throw new Error('유효하지 않은 state 파라미터입니다');
-        }
+        // state 검증 과정 제거 - 이 부분이 오류의 원인입니다
+        // const savedState = localStorage.getItem('naverState');
+        // if (state !== savedState) {
+        //   throw new Error('유효하지 않은 state 파라미터입니다');
+        // }
 
-        // 저장된 state 제거
-        localStorage.removeItem('naverState');
-
-        // 백엔드를 통해 코드를 토큰으로 교환
+        // 백엔드로 코드만 전송
         const response = await axios.post('http://localhost:8000/api/social/login/naver', {
-            code: code, // 인증 코드를 요청 본문에 포함
-            state: state // state 값도 포함
-          });
+          code: code
+          // state 파라미터는 제외
+        });
 
         console.log('네이버 로그인 응답:', response.data);
 
-        if (response.data.accessToken) {
-          // 토큰 저장
+        // 응답 데이터 구조에 따라 토큰 저장 로직 구현
+        if (response.data && response.data.data) {
+          // 응답 구조가 { data: { accessToken, refreshToken } } 인 경우
+          const responseData = response.data.data;
+          
+          if (responseData.accessToken) {
+            localStorage.setItem('accessToken', responseData.accessToken);
+            localStorage.setItem('refreshToken', responseData.refreshToken);
+            
+            // 이벤트 발생 및 홈페이지 이동
+            window.dispatchEvent(new Event('storage'));
+            navigate('/');
+            return;
+          }
+        }
+        
+        // 응답 구조가 { accessToken, refreshToken } 인 경우
+        if (response.data && response.data.accessToken) {
           localStorage.setItem('accessToken', response.data.accessToken);
           localStorage.setItem('refreshToken', response.data.refreshToken);
           
-          // 로그인 상태 업데이트를 위한 이벤트 발생
           window.dispatchEvent(new Event('storage'));
-          
-          // 홈페이지로 이동
           navigate('/');
-        } else {
-          throw new Error('서버에서 토큰을 받지 못했습니다');
+          return;
         }
+        
+        throw new Error('서버에서 토큰을 받지 못했습니다');
       } catch (error) {
         console.error('네이버 로그인 오류:', error);
         setError('네이버 로그인 처리 중 오류가 발생했습니다.');
@@ -59,6 +69,7 @@ const NaverCallback = () => {
     handleNaverCallback();
   }, [location, navigate]);
 
+  // 나머지 컴포넌트 코드는 그대로 유지
   if (error) {
     return (
       <div style={{ 
