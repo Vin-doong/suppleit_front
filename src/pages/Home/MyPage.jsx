@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import Header from '../../components/include/Header';
-import Footer from '../../components/include/Footer';
 
 const MyPage = () => {
   const [date, setDate] = useState(new Date());

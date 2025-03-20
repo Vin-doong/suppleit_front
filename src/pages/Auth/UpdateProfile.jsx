@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Form, Button, Container, Row, Col, ButtonGroup, ToggleButton } from "react-bootstrap";
-import { getMemberInfo } from "../../services/api";
+import { getMemberInfo, updateMemberInfo, checkNickname } from "../../services/api";
 import "../Auth/Signup.css";
 import Header from "../../components/include/Header";
 
@@ -15,6 +15,11 @@ const UpdateProfile = () => {
     birthDate: "",
     gender: ""
   });
+  const [originalNickname, setOriginalNickname] = useState("");
+  const [nicknameValidation, setNicknameValidation] = useState({
+    checked: false,
+    available: false
+  });
 
   // 컴포넌트가 마운트될 때 사용자 정보 가져오기
   useEffect(() => {
@@ -25,6 +30,9 @@ const UpdateProfile = () => {
         
         // API 응답에서 사용자 정보 추출
         const userData = response.data;
+        
+        // 원본 닉네임 저장 (중복 검사 시 필요)
+        setOriginalNickname(userData.nickname || "");
         
         // 가져온 정보로 폼 데이터 설정 (비밀번호 필드는 빈 값으로 설정)
         setFormData({
@@ -49,12 +57,88 @@ const UpdateProfile = () => {
     fetchUserData();
   }, []);
 
+  // 닉네임 변경 시 유효성 검사 결과 초기화
+  const handleNicknameChange = (e) => {
+    setFormData({
+      ...formData,
+      nickname: e.target.value
+    });
+    
+    // 원래 닉네임과 같으면 검사 완료 및 사용 가능 표시
+    if (e.target.value === originalNickname) {
+      setNicknameValidation({
+        checked: true,
+        available: true
+      });
+    } else {
+      // 다른 닉네임이면 검사 필요
+      setNicknameValidation({
+        checked: false,
+        available: false
+      });
+    }
+  };
+
+  // 일반 필드 변경 핸들러
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
     setFormData({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+  };
+
+  // 닉네임 중복 검사
+  const handleNicknameCheck = async () => {
+    // 원래 닉네임과 같으면 중복 검사 없이 통과
+    if (formData.nickname === originalNickname) {
+      setNicknameValidation({
+        checked: true,
+        available: true
+      });
+      alert("현재 사용 중인 닉네임입니다.");
+      return;
+    }
+    
+    if (!formData.nickname) {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+
+    // 닉네임 길이 검사
+    if (formData.nickname.length < 3 || formData.nickname.length > 20) {
+      alert("닉네임은 3~20자 사이여야 합니다.");
+      return;
+    }
+
+    // 닉네임 형식 검사 (영문, 숫자, 한글만)
+    const nicknameRegex = /^[a-zA-Z0-9가-힣]+$/;
+    if (!nicknameRegex.test(formData.nickname)) {
+      alert("닉네임은 영문, 숫자, 한글만 사용할 수 있습니다.");
+      return;
+    }
+
+    try {
+      const response = await checkNickname(formData.nickname);
+      console.log("닉네임 중복 확인 응답:", response.data);
+      
+      if (response.data.isAvailable) {
+        setNicknameValidation({
+          checked: true,
+          available: true
+        });
+        alert("사용 가능한 닉네임입니다.");
+      } else {
+        setNicknameValidation({
+          checked: true,
+          available: false
+        });
+        alert("이미 사용 중인 닉네임입니다.");
+      }
+    } catch (error) {
+      console.error("닉네임 중복 확인 오류:", error);
+      alert("닉네임 중복 확인 중 오류가 발생했습니다.");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -66,10 +150,23 @@ const UpdateProfile = () => {
       return;
     }
 
+    // 닉네임이 변경되었고 중복 검사를 하지 않았거나 사용할 수 없는 경우
+    if (formData.nickname !== originalNickname && (!nicknameValidation.checked || !nicknameValidation.available)) {
+      alert("닉네임 중복 확인이 필요합니다.");
+      return;
+    }
+
     // 비밀번호 변경을 원할 경우에만 비밀번호 검증
     if (formData.password || formData.confirmPassword) {
       if (formData.password !== formData.confirmPassword) {
         alert("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+      
+      // 비밀번호 형식 검증 (8자 이상, 숫자와 특수문자 포함)
+      const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$/;
+      if (!passwordRegex.test(formData.password)) {
+        alert("비밀번호는 8자 이상이며, 숫자와 특수문자를 포함해야 합니다.");
         return;
       }
     }
@@ -88,12 +185,21 @@ const UpdateProfile = () => {
       }
 
       // 회원 정보 업데이트 API 호출
-      // const response = await updateMemberInfo(updateData);
+      const response = await updateMemberInfo(updateData);
       
-      // 실제 API 호출을 할 때는 위 주석을 해제하고 아래 console.log는 제거해주세요
-      console.log("회원정보 수정 요청 데이터:", updateData);
+      console.log("회원정보 수정 응답:", response.data);
       
       alert("회원 정보가 성공적으로 수정되었습니다.");
+      
+      // 원본 닉네임 업데이트
+      setOriginalNickname(formData.nickname);
+      
+      // 비밀번호 필드 초기화
+      setFormData({
+        ...formData,
+        password: "",
+        confirmPassword: ""
+      });
     } catch (error) {
       console.error("회원 정보 수정 오류:", error);
       alert("회원 정보 수정 중 오류가 발생했습니다: " + 
@@ -180,14 +286,32 @@ const UpdateProfile = () => {
 
                   <Form.Group className="mb-3">
                     <Form.Label className="signup-form-label">닉네임</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="nickname"
-                      value={formData.nickname}
-                      onChange={handleChange}
-                      className="signup-form-control"
-                      required
-                    />
+                    <div className="d-flex">
+                      <Form.Control
+                        type="text"
+                        name="nickname"
+                        value={formData.nickname}
+                        onChange={handleNicknameChange}
+                        className="signup-form-control"
+                        style={{ flex: "1", minWidth: "0" }}
+                        required
+                      />
+                      <Button 
+                        variant="outline-primary" 
+                        onClick={handleNicknameCheck}
+                        style={{ width: "80px", marginLeft: "8px", whiteSpace: "nowrap" }}
+                      >
+                        중복확인
+                      </Button>
+                    </div>
+                    <Form.Text className="text-muted">
+                      닉네임은 3~20자의 영문, 숫자, 한글만 사용 가능합니다.
+                    </Form.Text>
+                    {nicknameValidation.checked && (
+                      <div className={`mt-1 ${nicknameValidation.available ? 'text-success' : 'text-danger'}`}>
+                        {nicknameValidation.available ? '✅ 사용 가능한 닉네임입니다.' : '❌ 이미 사용 중인 닉네임입니다.'}
+                      </div>
+                    )}
                   </Form.Group>
 
                   <Form.Group className="mb-3">
@@ -230,6 +354,7 @@ const UpdateProfile = () => {
                       type="submit" 
                       className="signup-btn-primary"
                       style={{ width: "120px" }}
+                      disabled={formData.nickname !== originalNickname && (!nicknameValidation.checked || !nicknameValidation.available)}
                     >
                       정보 수정
                     </Button>
