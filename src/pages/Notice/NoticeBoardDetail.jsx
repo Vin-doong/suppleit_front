@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Card, Button, Row, Col } from "react-bootstrap";
 import { getNoticeById, deleteNotice } from '../../services/api';
+import Header from "../../components/include/Header";
 
 const NoticeBoardDetail = () => {
   const { id } = useParams();
@@ -15,8 +16,27 @@ const NoticeBoardDetail = () => {
     const fetchNotice = async () => {
       try {
         setLoading(true);
+        console.log("상세 조회 요청 ID:", id);
         const response = await getNoticeById(id);
-        setNotice(response.data);
+        console.log("공지사항 상세 데이터:", response.data);
+        
+        // 백엔드 응답 데이터 처리
+        const noticeData = response.data;
+        
+        // 필드명 매핑 처리
+        const processedNotice = {
+          id: noticeData.noticeId || noticeData.id || id,
+          title: noticeData.title || "제목 없음",
+          content: noticeData.content || "",
+          author: "관리자", // 백엔드에서 작성자 정보가 없는 경우 기본값
+          views: noticeData.views || 0, // 조회수 정보가 없는 경우 기본값
+          date: noticeData.date || new Date().toLocaleDateString(), // 날짜 형식화
+          file: noticeData.attachmentPath 
+            ? `/api/notice/attachment/${noticeData.noticeId}/${noticeData.attachmentName}` 
+            : null
+        };
+        
+        setNotice(processedNotice);
         setLoading(false);
       } catch (error) {
         console.error("공지사항 조회 중 오류:", error);
@@ -27,11 +47,17 @@ const NoticeBoardDetail = () => {
 
     const checkUserRole = () => {
       const userRole = localStorage.getItem("role");
+      console.log("상세 페이지에서 확인한 사용자 역할:", userRole);
       setIsAdmin(userRole === "ADMIN");
     };
 
-    fetchNotice();
-    checkUserRole();
+    if (id) {
+      fetchNotice();
+      checkUserRole();
+    } else {
+      setError("공지사항 ID가 없습니다.");
+      setLoading(false);
+    }
   }, [id]);
 
   const handleDelete = async () => {
@@ -53,6 +79,7 @@ const NoticeBoardDetail = () => {
 
   return (
     <>
+      <Header />
       <Container style={{ marginTop: "100px", maxWidth: "1100px" }}>
         <Card className="p-5 shadow-lg d-flex flex-column" style={{ height: "auto" }}>
           <h2 className="mb-4" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{notice.title}</h2>

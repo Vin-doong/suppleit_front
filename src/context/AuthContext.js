@@ -9,24 +9,59 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null); // 사용자 역할 상태 추가
 
   useEffect(() => {
     // 토큰 확인 등의 초기화 작업
     const token = localStorage.getItem('accessToken');
+    const role = localStorage.getItem('role');
     
     if (token) {
-      // 실제 API 호출 대신 간단히 인증 상태 설정
       setIsAuthenticated(true);
-      setCurrentUser({ email: "example@email.com" }); // 임시
+      setUserRole(role); // 역할 정보 설정
+      
+      // API 호출로 사용자 정보 가져오기 (생략)
+      setCurrentUser({ email: "example@email.com", role: role }); // 임시
     }
     
     setLoading(false);
+    
+    // 스토리지 이벤트 리스너 추가
+    const handleStorageChange = () => {
+      const updatedToken = localStorage.getItem('accessToken');
+      const updatedRole = localStorage.getItem('role');
+      
+      setIsAuthenticated(!!updatedToken);
+      setUserRole(updatedRole);
+      
+      if (updatedToken) {
+        setCurrentUser({ email: "example@email.com", role: updatedRole }); // 임시
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // 로그인 함수
   const login = (userData, tokens) => {
     localStorage.setItem('accessToken', tokens.accessToken);
     localStorage.setItem('refreshToken', tokens.refreshToken);
+    
+    // 역할 정보 저장 추가
+    if (userData && userData.memberRole) {
+      localStorage.setItem('role', userData.memberRole);
+      setUserRole(userData.memberRole);
+    } else {
+      localStorage.setItem('role', 'USER');
+      setUserRole('USER');
+    }
+    
     setCurrentUser(userData);
     setIsAuthenticated(true);
   };
@@ -35,14 +70,18 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('role'); // 역할 정보도 제거
     setCurrentUser(null);
     setIsAuthenticated(false);
+    setUserRole(null); // 역할 정보 초기화
   };
 
   const value = {
     currentUser,
     loading,
     isAuthenticated,
+    userRole, // 역할 정보 추가
+    isAdmin: userRole === 'ADMIN', // 관리자 여부 편의 속성 추가
     login,
     logout,
   };

@@ -42,6 +42,15 @@ const GoogleCallback = () => {
             localStorage.setItem('accessToken', responseData.accessToken);
             localStorage.setItem('refreshToken', responseData.refreshToken);
             
+            // 역할 정보 저장 (추가)
+            if (responseData.member && responseData.member.memberRole) {
+              localStorage.setItem('role', responseData.member.memberRole);
+              console.log("역할 정보 저장:", responseData.member.memberRole);
+            } else {
+              localStorage.setItem('role', 'USER');
+              console.log("기본 역할 'USER' 저장");
+            }
+            
             console.log('토큰 저장 완료 (data 객체 내부)');
             window.dispatchEvent(new Event('storage'));
             navigate('/');
@@ -53,6 +62,15 @@ const GoogleCallback = () => {
         if (response.data && response.data.accessToken) {
           localStorage.setItem('accessToken', response.data.accessToken);
           localStorage.setItem('refreshToken', response.data.refreshToken);
+          
+          // 역할 정보 저장 (추가)
+          if (response.data.member && response.data.member.memberRole) {
+            localStorage.setItem('role', response.data.member.memberRole);
+            console.log("역할 정보 저장:", response.data.member.memberRole);
+          } else {
+            localStorage.setItem('role', 'USER');
+            console.log("기본 역할 'USER' 저장");
+          }
           
           console.log('토큰 저장 완료 (최상위 레벨)');
           window.dispatchEvent(new Event('storage'));

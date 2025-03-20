@@ -1,8 +1,6 @@
 // App.jsx의 import 부분을 확인
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-// 수정: schedule -> Schedule (대소문자 확인)
-
 import { useState } from "react";
 import Home from "./pages/Home/Home";
 import Login from "./pages/Auth/Login";
@@ -33,7 +31,7 @@ function App() {
   return (
     <Router> 
       <Routes>
-      <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/mypage" element={<MyPage />} />
@@ -42,12 +40,14 @@ function App() {
         <Route path="/productdetail" element={<ProductDetail />} />
         <Route path="/review" element={<ReviewForm />} />
         <Route path="/favorites" element={<FavoriteList />} />
-        <Route path="/notices" element={<NoticeBoard notices={notices}/>} />
-        <Route path="/notice/:id" element={<NoticeBoardDetail notices={notices} />} />
-        <Route path="/notices/edit/:id" element={<NoticeBoardEdit notices={notices} />} />
+        
+        {/* 공지사항 라우트 - 수정된 경로 */}
+        <Route path="/notices" element={<NoticeBoard />} />
+        <Route path="/notices/:id" element={<NoticeBoardDetail />} />
+        <Route path="/notices/edit/:id" element={<NoticeBoardEdit />} />
         <Route path="/newnotice" element={<NoticeBoardInsert onSubmit={handleAddNotice} />} />
+        
         <Route path="/schedule" element={<Schedule />} />
-
         <Route path="/callback/google" element={<GoogleCallback />} />
         <Route path="/callback/naver" element={<NaverCallback />} />
       </Routes>

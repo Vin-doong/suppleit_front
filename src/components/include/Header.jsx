@@ -4,19 +4,27 @@ import { Link, useNavigate } from 'react-router-dom';
 const Header = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 로그인 상태 확인
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     const refreshToken = localStorage.getItem("refreshToken");
+    const userRole = localStorage.getItem("role");
+    
     setIsLoggedIn(!!(accessToken || refreshToken));
+    setIsAdmin(userRole === "ADMIN");
+    
+    console.log("헤더에서 확인한 사용자 역할:", userRole);
   }, []);
 
   // 로그아웃 처리
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('role');
     setIsLoggedIn(false);
+    setIsAdmin(false);
     navigate('/');
   };
 
@@ -43,6 +51,13 @@ const Header = () => {
 
           {/* 로그인 / 로그아웃 버튼 */}
           <div className="flex items-center space-x-4">
+            {/* 관리자 표시 */}
+            {isAdmin && (
+              <span className="px-3 py-1 bg-teal-100 text-teal-600 rounded-md font-medium">
+                관리자
+              </span>
+            )}
+            
             {isLoggedIn ? (
               <button 
                 onClick={handleLogout} 

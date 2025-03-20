@@ -18,16 +18,9 @@ const NaverCallback = () => {
           throw new Error('인증 코드를 찾을 수 없습니다');
         }
 
-        // state 검증 과정 제거 - 이 부분이 오류의 원인입니다
-        // const savedState = localStorage.getItem('naverState');
-        // if (state !== savedState) {
-        //   throw new Error('유효하지 않은 state 파라미터입니다');
-        // }
-
         // 백엔드로 코드만 전송
         const response = await axios.post('http://localhost:8000/api/social/login/naver', {
           code: code
-          // state 파라미터는 제외
         });
 
         console.log('네이버 로그인 응답:', response.data);
@@ -41,6 +34,15 @@ const NaverCallback = () => {
             localStorage.setItem('accessToken', responseData.accessToken);
             localStorage.setItem('refreshToken', responseData.refreshToken);
             
+            // 역할 정보 저장 (추가)
+            if (responseData.member && responseData.member.memberRole) {
+              localStorage.setItem('role', responseData.member.memberRole);
+              console.log("역할 정보 저장:", responseData.member.memberRole);
+            } else {
+              localStorage.setItem('role', 'USER');
+              console.log("기본 역할 'USER' 저장");
+            }
+            
             // 이벤트 발생 및 홈페이지 이동
             window.dispatchEvent(new Event('storage'));
             navigate('/');
@@ -52,6 +54,15 @@ const NaverCallback = () => {
         if (response.data && response.data.accessToken) {
           localStorage.setItem('accessToken', response.data.accessToken);
           localStorage.setItem('refreshToken', response.data.refreshToken);
+          
+          // 역할 정보 저장 (추가)
+          if (response.data.member && response.data.member.memberRole) {
+            localStorage.setItem('role', response.data.member.memberRole);
+            console.log("역할 정보 저장:", response.data.member.memberRole);
+          } else {
+            localStorage.setItem('role', 'USER');
+            console.log("기본 역할 'USER' 저장");
+          }
           
           window.dispatchEvent(new Event('storage'));
           navigate('/');

@@ -89,11 +89,6 @@ const NoticeBoardInsert = () => {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>작성자</Form.Label>
-                <Form.Control type="text" readOnly /> {/* 이거 봐야됨 0319 작성자가 누군지 확인해야되는거 */}
-              </Form.Group>
-
-              <Form.Group className="mb-3">
               <Form.Label>내용</Form.Label>
               <div style={{ border: "none", borderRadius: "5px", padding: "5px", minHeight: "300px" }}>
                 <ReactQuill 

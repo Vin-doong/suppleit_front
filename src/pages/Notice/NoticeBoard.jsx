@@ -21,6 +21,7 @@ const NoticeBoard = () => {
       try {
         setLoading(true);
         const response = await getNotices();
+        console.log("공지사항 API 응답:", response.data);
         setNotices(response.data);
         setLoading(false);
       } catch (error) {
@@ -33,6 +34,7 @@ const NoticeBoard = () => {
     // 관리자 권한 확인
     const checkUserRole = () => {
       const userRole = localStorage.getItem("role");
+      console.log("공지사항 페이지에서 확인한 사용자 역할:", userRole); // 디버깅용 로그
       setIsAdmin(userRole === "ADMIN");
     };
 
@@ -44,7 +46,7 @@ const NoticeBoard = () => {
   if (loading) return <div>로딩 중...</div>;
   if (error) return <div>{error}</div>;
 
-  // 검색 및 페이지네이션 로직 (기존 코드 유지)
+  // 검색 및 페이지네이션 로직
   const filteredNotices = notices.filter((notice) =>
     notice.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -132,17 +134,17 @@ const NoticeBoard = () => {
                   {currentNotices.length > 0 ? (
                     currentNotices.map((notice, index) => (
                       <tr key={index}>
-                        <td>{notice.id}</td>
-                        <td
-                          onClick={() => navigate(`/notice/${notice.id}`)}
+                        <td>{notice.noticeId || notice.id || index + 1}</td>
+                        <td 
+                          onClick={() => navigate(`/notices/${notice.noticeId || notice.id}`)} 
                           className="notice-title-link"
                           style={{ cursor: "pointer", color: "#0d9488" }}
                         >
                           {notice.title}
                         </td>
-                        <td>{notice.author}</td>
-                        <td>{notice.views}</td>
-                        <td>{notice.date}</td>
+                        <td>{"관리자"}</td>
+                        <td>{notice.views || 0}</td>
+                        <td>{notice.date || new Date().toLocaleDateString()}</td>
                       </tr>
                     ))
                   ) : (
@@ -156,7 +158,7 @@ const NoticeBoard = () => {
               </Table>
             </div>
 
-          {/* 페이지네이션 */}
+            {/* 페이지네이션 */}
             <div className="pagination-container d-flex justify-content-center">
               <Pagination>
                 <Pagination.Prev
@@ -178,7 +180,7 @@ const NoticeBoard = () => {
             </div>
 
             {/* 글쓰기 버튼 - 관리자만 표시 */}
-            {isAdmin && (
+            {isAdmin ? (
               <div className="notice-button-container text-center">
                 <Button
                   className="notice-write-button"
@@ -193,6 +195,10 @@ const NoticeBoard = () => {
                 >
                   글쓰기
                 </Button>
+              </div>
+            ) : (
+              <div style={{textAlign: 'center', marginTop: '10px'}}>
+                <small className="text-muted">현재 사용자 역할: {localStorage.getItem("role") || "없음"}</small>
               </div>
             )}
           </Card.Body>

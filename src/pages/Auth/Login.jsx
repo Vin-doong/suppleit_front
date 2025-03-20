@@ -34,25 +34,35 @@ const Login = () => {
         // 토큰 저장
         localStorage.setItem('accessToken', response.data.accessToken);
         localStorage.setItem('refreshToken', response.data.refreshToken);
+
+        // 사용자 정보 요청 및 역할 저장 //0320
+        try {
+          const userInfoResponse = await axios.get('http://localhost:8000/api/member/info', {
+            headers: {
+              'Authorization': `Bearer ${response.data.accessToken}`
+            }
+          });
+        
+        // 역할 정보 저장 (ADMIN 또는 USER)
+        localStorage.setItem('role', userInfoResponse.data.memberRole);
         
         // 로그인 상태 업데이트를 위한 이벤트 발생
         window.dispatchEvent(new Event('storage'));
         
         // 홈페이지로 이동
         navigate('/');
-      } else {
-        setError('로그인에 실패했습니다. 응답에 토큰이 없습니다.');
+      } catch (userInfoError) {
+        console.error('사용자 정보 요청 오류:', userInfoError);
+        setError('사용자 정보를 가져오는 중 오류가 발생했습니다.');
       }
-    } catch (error) {
-      console.error('로그인 오류:', error);
-      setError(
-        error.response?.data?.message || 
-        '로그인 중 오류가 발생했습니다. 다시 시도해주세요.'
-      );
-    } finally {
-      setIsLoading(false);
+    } else {
+      setError('로그인에 실패했습니다. 응답에 토큰이 없습니다.');
     }
-  };
+  } catch (error) {
+    console.error('로그인 오류:', error);
+    setError(error.response?.data?.message || '로그인 중 오류가 발생했습니다.');
+  }
+};
 
   // 구글 로그인 처리 함수
   const handleGoogleLogin = () => {

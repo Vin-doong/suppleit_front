@@ -123,12 +123,40 @@ export const getNoticeById = async (id) => {
 
 // 공지사항 생성
 export const createNotice = async (noticeData) => {
-  return api.post("/notice", noticeData);
+  const formData = new FormData();
+  formData.append('notice', new Blob([JSON.stringify({
+    title: noticeData.title,
+    content: noticeData.content
+  })], { type: 'application/json' }));
+  
+  if (noticeData.file) {
+    formData.append('image', noticeData.file);
+  }
+  
+  return api.post("/notice", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
 // 공지사항 수정
 export const updateNotice = async (id, noticeData) => {
-  return api.put(`/notice/${id}`, noticeData);
+  const formData = new FormData();
+  formData.append('notice', new Blob([JSON.stringify({
+    title: noticeData.title,
+    content: noticeData.content
+  })], { type: 'application/json' }));
+  
+  if (noticeData.file) {
+    formData.append('image', noticeData.file);
+  }
+  
+  return api.put(`/notice/${id}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
 // 공지사항 삭제
