@@ -64,6 +64,9 @@ const MyPage = () => {
             <Link to="/health-status" className="text-gray-600 hover:bg-gray-50 flex items-center px-3 py-2 text-sm font-medium rounded-md">
               <i className="fas fa-heartbeat w-6"></i> {isSidebarOpen && '건강 상태'}
             </Link>
+            <Link to="/profile" className="text-gray-600 hover:bg-gray-50 flex items-center px-3 py-2 text-sm font-medium rounded-md">
+              <i className="fas fa-user w-6"></i> {isSidebarOpen && '회원정보수정'}
+            </Link>
           </nav>
         </aside>
 

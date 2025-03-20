@@ -5,7 +5,7 @@ import "./Signup.css";
 import { signup } from '../../services/api';
 
 const Signup = () => {
-  //회원가입 데이터 
+  // 회원가입 데이터 
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
@@ -15,6 +15,8 @@ const Signup = () => {
     birthDate: "",
     gender: "",
     termsAgreed: false,
+    adminOption: false,  // 관리자 옵션 체크박스 추가
+    adminCode: "",       // 관리자 코드 입력 필드 추가
   });
 
   const handleChange = (e) => {
@@ -38,6 +40,17 @@ const Signup = () => {
       return;
     }
     
+    // 관리자 옵션 선택 시 코드 검증
+    if (formData.adminOption) {
+      // 실제 프로젝트에서는 환경 변수나 설정파일에서 관리
+      const validAdminCode = process.env.REACT_APP_ADMIN_SECRET_CODE;
+            
+      if (formData.adminCode !== validAdminCode) {
+        alert("관리자 코드가 올바르지 않습니다.");
+        return;
+      }
+    }
+    
     try {
       // 백엔드로 전송할 회원가입 데이터 준비
       const userData = {
@@ -46,15 +59,18 @@ const Signup = () => {
         nickname: formData.nickname,
         gender: formData.gender === "남자" ? "MALE" : "FEMALE",
         birth: formData.birthDate,
-        memberRole: "USER",
+        // 관리자 옵션에 따라 역할 결정
+        memberRole: formData.adminOption ? "ADMIN" : "USER",
         socialType: "NONE"
       };
+      
+      console.log("회원가입 요청 데이터:", userData);
       
       // API 호출하여 회원가입 요청
       const response = await signup(userData);
       
       if (response.data && response.data.success) {
-        alert("회원가입에 성공했습니다!");
+        alert(`${formData.adminOption ? '관리자' : '일반 회원'} 계정으로 가입되었습니다!`);
         navigate('/login'); // 로그인 페이지로 이동
       } else {
         alert(response.data.message || "회원가입에 실패했습니다.");
@@ -137,67 +153,99 @@ const Signup = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                <Form.Label>성별</Form.Label>
-                <ButtonGroup className="gender-button-group">
-                  {["남자", "여자"].map((g, idx) => (
-                    <ToggleButton
-                      key={idx}
-                      id={`gender-${g}`}
-                      type="radio"
-                      name="gender"
-                      value={g}
-                      variant="outline-primary"
-                      checked={formData.gender === g} 
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })} 
-                      className={`gender-button ${formData.gender === g ? "isActive" : ""}`}
-                    >
-                      {g}
-                    </ToggleButton>
-                  ))}
-                </ButtonGroup>
-              </Form.Group>
+                  <Form.Label>성별</Form.Label>
+                  <ButtonGroup className="gender-button-group">
+                    {["남자", "여자"].map((g, idx) => (
+                      <ToggleButton
+                        key={idx}
+                        id={`gender-${g}`}
+                        type="radio"
+                        name="gender"
+                        value={g}
+                        variant="outline-primary"
+                        checked={formData.gender === g} 
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })} 
+                        className={`gender-button ${formData.gender === g ? "isActive" : ""}`}
+                      >
+                        {g}
+                      </ToggleButton>
+                    ))}
+                  </ButtonGroup>
+                </Form.Group>
 
-              <Form.Group className="mb-3 d-flex align-items-center">
-                {/* 체크박스 */}
-                <Form.Check
-                  type="checkbox"
-                  name="termsAgreed"
-                  checked={formData.termsAgreed}
-                  onChange={handleChange}
-                  required
-                  className="me-2"
-                />
-                {/* 모달을 열 수 있는 텍스트 */}
-                <span
-                  style={{ color: "#007bff", cursor: "pointer", fontSize: "14px" }}
-                  onClick={() => setShowModal(true)}
-                >
-                  [필수] 개인정보 수집 및 이용 동의서
-                </span>
-              </Form.Group>
+                {/* 관리자 계정 옵션 체크박스 */}
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    id="adminOption"
+                    name="adminOption"
+                    label="관리자 계정으로 가입"
+                    checked={formData.adminOption}
+                    onChange={handleChange}
+                    className="text-primary"
+                  />
+                </Form.Group>
 
-              {/* 🏆 React-Bootstrap Modal */}
-              <Modal show={showModal} onHide={() => setShowModal(false)}>
-                <Modal.Header closeButton>
-                  <Modal.Title>개인정보 수집 및 이용 동의서</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                  <p>
-                  [필수] 개인정보 수집 및 이용 동의서<br /> <br />
-                  1. 수집 목적: 회원가입, 서비스 제공, 고객 지원.  <br />
-                  2. 수집 항목: 이메일, 비밀번호, 생년월일, 성별.  <br />
-                  3. 보유 기간: 회원 탈퇴 시 즉시 삭제 (단, 법령에 따라 일정 기간 보관될 수 있음).  <br />
-                  4. 제3자 제공: 법적 의무 또는 이용자 동의 없이 제공되지 않음.  <br />
-                  5. 이용자 권리: 개인정보 열람·수정·삭제 가능, 동의 철회 가능.  <br /> <br />
-                  ※ 동의하지 않을 경우 서비스 이용이 제한될 수 있습니다.
-                  </p>
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button variant="secondary" onClick={() => setShowModal(false)}>
-                    닫기
-                  </Button>
-                </Modal.Footer>
-              </Modal>
+                {/* 관리자 코드 입력 필드 (조건부 렌더링) */}
+                {formData.adminOption && (
+                  <Form.Group className="mb-3">
+                    <Form.Label className="signup-form-label">관리자 코드</Form.Label>
+                    <Form.Control
+                      type="password"
+                      name="adminCode"
+                      value={formData.adminCode}
+                      onChange={handleChange}
+                      required={formData.adminOption}
+                      className="signup-form-control"
+                      placeholder="관리자 코드를 입력하세요"
+                    />
+                    <Form.Text className="text-muted">
+                      관리자 계정으로 가입하려면 관리자 코드가 필요합니다.
+                    </Form.Text>
+                  </Form.Group>
+                )}
+
+                <Form.Group className="mb-3 d-flex align-items-center">
+                  {/* 체크박스 */}
+                  <Form.Check
+                    type="checkbox"
+                    name="termsAgreed"
+                    checked={formData.termsAgreed}
+                    onChange={handleChange}
+                    required
+                    className="me-2"
+                  />
+                  {/* 모달을 열 수 있는 텍스트 */}
+                  <span
+                    style={{ color: "#007bff", cursor: "pointer", fontSize: "14px" }}
+                    onClick={() => setShowModal(true)}
+                  >
+                    [필수] 개인정보 수집 및 이용 동의서
+                  </span>
+                </Form.Group>
+
+                {/* React-Bootstrap Modal */}
+                <Modal show={showModal} onHide={() => setShowModal(false)}>
+                  <Modal.Header closeButton>
+                    <Modal.Title>개인정보 수집 및 이용 동의서</Modal.Title>
+                  </Modal.Header>
+                  <Modal.Body>
+                    <p>
+                    [필수] 개인정보 수집 및 이용 동의서<br /> <br />
+                    1. 수집 목적: 회원가입, 서비스 제공, 고객 지원.  <br />
+                    2. 수집 항목: 이메일, 비밀번호, 생년월일, 성별.  <br />
+                    3. 보유 기간: 회원 탈퇴 시 즉시 삭제 (단, 법령에 따라 일정 기간 보관될 수 있음).  <br />
+                    4. 제3자 제공: 법적 의무 또는 이용자 동의 없이 제공되지 않음.  <br />
+                    5. 이용자 권리: 개인정보 열람·수정·삭제 가능, 동의 철회 가능.  <br /> <br />
+                    ※ 동의하지 않을 경우 서비스 이용이 제한될 수 있습니다.
+                    </p>
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowModal(false)}>
+                      닫기
+                    </Button>
+                  </Modal.Footer>
+                </Modal>
 
                 <Button variant="primary" type="submit" className="signup-btn-primary">
                   회원가입
