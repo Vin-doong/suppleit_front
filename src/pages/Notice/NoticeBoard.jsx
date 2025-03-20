@@ -15,6 +15,17 @@ const NoticeBoard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const itemsPerPage = 10;
 
+  // 날짜 포맷 함수
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
   // 공지사항 데이터 로드
   useEffect(() => {
     const fetchNotices = async () => {
@@ -34,7 +45,7 @@ const NoticeBoard = () => {
     // 관리자 권한 확인
     const checkUserRole = () => {
       const userRole = localStorage.getItem("role");
-      console.log("공지사항 페이지에서 확인한 사용자 역할:", userRole); // 디버깅용 로그
+      console.log("공지사항 페이지에서 확인한 사용자 역할:", userRole);
       setIsAdmin(userRole === "ADMIN");
     };
 
@@ -115,11 +126,11 @@ const NoticeBoard = () => {
             <div className="notice-table-container">
               <Table striped bordered hover responsive className="notice-table text-center">
                 <colgroup>
-                  <col style={{ width: "15%" }} /> {/* 번호 */}
+                  <col style={{ width: "10%" }} /> {/* 번호 */}
                   <col style={{ width: "50%" }} /> {/* 제목 (가장 넓게) */}
-                  <col style={{ width: "10%" }} /> {/* 작성자 */}
-                  <col style={{ width: "10%" }} /> {/* 조회수 */}
-                  <col style={{ width: "15%" }} /> {/* 작성일 */}
+                  <col style={{ width: "12%" }} /> {/* 작성자 */}
+                  <col style={{ width: "8%" }} /> {/* 조회수 */}
+                  <col style={{ width: "20%" }} /> {/* 작성일 */}
                 </colgroup>
                 <thead style={{ backgroundColor: "#0d9488", color: "white" }}>
                   <tr>
@@ -134,17 +145,21 @@ const NoticeBoard = () => {
                   {currentNotices.length > 0 ? (
                     currentNotices.map((notice, index) => (
                       <tr key={index}>
-                        <td>{notice.noticeId || notice.id || index + 1}</td>
+                        {/* 순차적 번호 표시 (내림차순) */}
+                        <td>{filteredNotices.length - (indexOfFirstNotice + index)}</td>
                         <td 
-                          onClick={() => navigate(`/notices/${notice.noticeId || notice.id}`)} 
+                          onClick={() => navigate(`/notices/${notice.noticeId}`)} 
                           className="notice-title-link"
                           style={{ cursor: "pointer", color: "#0d9488" }}
                         >
                           {notice.title}
                         </td>
-                        <td>{"관리자"}</td>
+                        <td>{notice.authorName || "관리자"}</td>
                         <td>{notice.views || 0}</td>
-                        <td>{notice.date || new Date().toLocaleDateString()}</td>
+                        <td>
+                          {/* 작성일만 표시 (원복) */}
+                          {formatDate(notice.createdAt)}
+                        </td>
                       </tr>
                     ))
                   ) : (

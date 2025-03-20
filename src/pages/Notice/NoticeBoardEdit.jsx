@@ -4,6 +4,7 @@ import { Container, Card, Button, Form } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { getNoticeById, updateNotice } from '../../services/api';
+import Header from "../../components/include/Header";
 
 const NoticeBoardEdit = () => {
   const { id } = useParams();
@@ -69,15 +70,25 @@ const NoticeBoardEdit = () => {
     }
   };
 
+  // ReactQuill 모듈 설정 - 중복 툴바 방지
   const modules = {
-    toolbar: [
-      [{ header: "1" }, { header: "2" }, { font: [] }],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["bold", "italic", "underline", "strike"],
-      ["link", "image"],
-      ["clean"],
-    ],
+    toolbar: {
+      container: [
+        [{ header: [1, 2, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        ['link', 'image'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['clean']
+      ],
+    }
   };
+
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'link', 'image'
+  ];
 
   if (loading) return <div>로딩 중...</div>;
   if (error) return <div>{error}</div>;
@@ -85,6 +96,7 @@ const NoticeBoardEdit = () => {
 
   return (
     <>
+      <Header />
       <Container style={{ marginTop: "100px" }}>
         <Card className="p-4 shadow-lg">
           <h2 className="mb-3" style={{ fontSize: "1.8rem", fontWeight: "bold" }}>
@@ -110,6 +122,7 @@ const NoticeBoardEdit = () => {
               value={content} 
               onChange={setContent} 
               modules={modules} 
+              formats={formats}
               placeholder="공지사항 내용을 입력하세요"
             />
           </Form.Group>
@@ -122,9 +135,9 @@ const NoticeBoardEdit = () => {
               onChange={handleFileChange} 
             />
             {/* 기존 파일 표시 (선택적) */}
-            {notice.file && (
+            {notice.attachmentName && (
               <div className="mt-2 text-muted">
-                현재 파일: {notice.file.split('/').pop()}
+                현재 파일: {notice.attachmentName}
               </div>
             )}
           </Form.Group>

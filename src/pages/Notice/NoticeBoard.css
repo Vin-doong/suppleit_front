@@ -140,3 +140,7 @@
   color: #ccc;
   border: 1px solid #f8f9fa;
 }
+
+div[role="toolbar"].ql-toolbar:nth-of-type(1) {
+  display: none !important;
+}

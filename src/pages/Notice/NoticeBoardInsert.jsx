@@ -4,6 +4,7 @@ import { Container, Form, Button, Card } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { createNotice } from '../../services/api';
+import Header from "../../components/include/Header";
 
 const NoticeBoardInsert = () => {
   const navigate = useNavigate();
@@ -56,16 +57,26 @@ const NoticeBoardInsert = () => {
     }
   };
 
-
+  // ReactQuill 모듈 설정 - 중복 툴바 방지
   const modules = {
-    toolbar: [
-      [{ header: "1" }, { header: "2" }, { font: [] }],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["bold", "italic", "underline", "strike"],
-      ["link", "image"],
-      ["clean"],
-    ],
+    toolbar: {
+      container: [
+        [{ header: [1, 2, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        ['link', 'image'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['clean']
+      ],
+    }
   };
+
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'link', 'image'
+  ];
+
   // 관리자가 아닌 경우 작성 페이지 렌더링 방지
   if (!isAdmin) {
     return null;
@@ -73,6 +84,7 @@ const NoticeBoardInsert = () => {
 
   return (
     <>
+      <Header />
       <div style={{ backgroundColor: "#c0ebe5", padding: "20px", minHeight: "100vh" }}>
         <Container style={{ marginTop: "50px" }}>
           <Card className="p-4 shadow-lg">
@@ -89,17 +101,18 @@ const NoticeBoardInsert = () => {
               </Form.Group>
 
               <Form.Group className="mb-3">
-              <Form.Label>내용</Form.Label>
-              <div style={{ border: "none", borderRadius: "5px", padding: "5px", minHeight: "300px" }}>
-                <ReactQuill 
-                  theme="snow" 
-                  value={content}  
-                  modules={modules} 
-                  onChange={setContent} 
-                  style={{ height: "250px" }} // 내부 텍스트 입력 영역만 줄이기
-                />
-              </div>
-            </Form.Group>
+                <Form.Label>내용</Form.Label>
+                <div style={{ border: "none", borderRadius: "5px", padding: "5px", minHeight: "300px" }}>
+                  <ReactQuill 
+                    theme="snow" 
+                    value={content}  
+                    modules={modules} 
+                    formats={formats}
+                    onChange={setContent} 
+                    style={{ height: "250px" }}
+                  />
+                </div>
+              </Form.Group>
 
               <Form.Group className="mb-3">
                 <Form.Control type="file" onChange={handleFileChange} />

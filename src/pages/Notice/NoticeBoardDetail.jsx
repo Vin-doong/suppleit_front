@@ -28,9 +28,10 @@ const NoticeBoardDetail = () => {
           id: noticeData.noticeId || noticeData.id || id,
           title: noticeData.title || "제목 없음",
           content: noticeData.content || "",
-          author: "관리자", // 백엔드에서 작성자 정보가 없는 경우 기본값
-          views: noticeData.views || 0, // 조회수 정보가 없는 경우 기본값
-          date: noticeData.date || new Date().toLocaleDateString(), // 날짜 형식화
+          author: noticeData.authorName || "관리자",
+          views: noticeData.views || 0,
+          createdAt: noticeData.createdAt || new Date().toISOString(),
+          updatedAt: noticeData.updatedAt,
           file: noticeData.attachmentPath 
             ? `/api/notice/attachment/${noticeData.noticeId}/${noticeData.attachmentName}` 
             : null
@@ -85,7 +86,16 @@ const NoticeBoardDetail = () => {
           <h2 className="mb-4" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{notice.title}</h2>
 
           <p className="text-muted">
-            <strong>작성자:</strong> {notice.author} | <strong>조회수:</strong> {notice.views} | <strong>날짜:</strong> {notice.date}
+            <strong>작성자:</strong> {notice.author} | 
+            <strong>조회수:</strong> {notice.views} | 
+            <strong>작성일:</strong> {
+              notice.createdAt 
+                ? new Date(notice.createdAt).toLocaleDateString() 
+                : new Date().toLocaleDateString()
+            }
+            {notice.updatedAt && notice.createdAt !== notice.updatedAt && (
+              <span> | <strong>수정일:</strong> {new Date(notice.updatedAt).toLocaleDateString()}</span>
+            )}
           </p>
           <hr />
 
