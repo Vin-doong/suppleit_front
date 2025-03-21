@@ -12,6 +12,8 @@ const NoticeBoardInsert = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
+  const [fileType, setFileType] = useState(""); // 파일 타입 추적을 위한 상태 추가
+  const [isSubmitting, setIsSubmitting] = useState(false); // 제출 중 상태 추적
 
   useEffect(() => {
     const checkUserRole = () => {
@@ -29,7 +31,12 @@ const NoticeBoardInsert = () => {
   }, [navigate]);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileType(selectedFile.type);
+      console.log("선택된 파일 타입:", selectedFile.type);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -40,7 +47,14 @@ const NoticeBoardInsert = () => {
       return;
     }
 
+    if (isSubmitting) {
+      return; // 중복 제출 방지
+    }
+
     try {
+      setIsSubmitting(true);
+      
+      // FormData 객체로 데이터 준비
       const noticeData = {
         title,
         content,
@@ -54,6 +68,8 @@ const NoticeBoardInsert = () => {
     } catch (error) {
       console.error("공지사항 등록 중 오류:", error);
       alert("공지사항 등록 중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -115,15 +131,32 @@ const NoticeBoardInsert = () => {
               </Form.Group>
 
               <Form.Group className="mb-3">
+                <Form.Label>첨부 파일</Form.Label>
                 <Form.Control type="file" onChange={handleFileChange} />
+                {file && (
+                  <div className="mt-2 text-muted">
+                    {fileType.startsWith('image/') 
+                      ? `선택된 이미지: ${file.name}` 
+                      : `선택된 파일: ${file.name}`}
+                  </div>
+                )}
               </Form.Group>
 
               <div className="d-flex justify-content-end">
-                <Button variant="secondary" className="me-2" onClick={() => navigate("/notices")}>
+                <Button 
+                  variant="secondary" 
+                  className="me-2" 
+                  onClick={() => navigate("/notices")}
+                  disabled={isSubmitting}
+                >
                   취소
                 </Button>
-                <Button style={{ backgroundColor: "#2A9D8F", color: "white", border: "none" }} type="submit">
-                  등록
+                <Button 
+                  style={{ backgroundColor: "#2A9D8F", color: "white", border: "none" }} 
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "등록 중..." : "등록"}
                 </Button>
               </div>
             </Form>

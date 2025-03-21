@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Form, Button, Container, Row, Col, ButtonGroup, ToggleButton } from "react-bootstrap";
-import { getMemberInfo, updateMemberInfo, checkNickname } from "../../services/api";
+import { useNavigate } from "react-router-dom";
+import { Form, Button, Container, Row, Col, ButtonGroup, ToggleButton, Alert } from "react-bootstrap";
+import { getMemberInfo, updateMemberInfo, checkNickname, deleteMember } from "../../services/api";
 import "../Auth/Signup.css";
 import Header from "../../components/include/Header";
 
 const UpdateProfile = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
@@ -20,6 +22,8 @@ const UpdateProfile = () => {
     checked: false,
     available: false
   });
+  const [isSocialAccount, setIsSocialAccount] = useState(false);
+  const [socialType, setSocialType] = useState("");
 
   // 컴포넌트가 마운트될 때 사용자 정보 가져오기
   useEffect(() => {
@@ -30,6 +34,13 @@ const UpdateProfile = () => {
         
         // API 응답에서 사용자 정보 추출
         const userData = response.data;
+        
+        console.log("사용자 정보:", userData);
+        
+        // 소셜 계정 여부 확인 (socialType이 'NONE'이 아니면 소셜 계정)
+        const isSocial = userData.socialType !== 'NONE';
+        setIsSocialAccount(isSocial);
+        setSocialType(userData.socialType || 'NONE');
         
         // 원본 닉네임 저장 (중복 검사 시 필요)
         setOriginalNickname(userData.nickname || "");
@@ -59,6 +70,8 @@ const UpdateProfile = () => {
 
   // 닉네임 변경 시 유효성 검사 결과 초기화
   const handleNicknameChange = (e) => {
+    if (isSocialAccount) return; // 소셜 계정인 경우 변경 불가
+    
     setFormData({
       ...formData,
       nickname: e.target.value
@@ -81,6 +94,8 @@ const UpdateProfile = () => {
 
   // 일반 필드 변경 핸들러
   const handleChange = (e) => {
+    if (isSocialAccount) return; // 소셜 계정인 경우 변경 불가
+    
     const { name, value, checked, type } = e.target;
     setFormData({
       ...formData,
@@ -90,6 +105,11 @@ const UpdateProfile = () => {
 
   // 닉네임 중복 검사
   const handleNicknameCheck = async () => {
+    if (isSocialAccount) {
+      alert("소셜 계정은 닉네임을 변경할 수 없습니다.");
+      return;
+    }
+    
     // 원래 닉네임과 같으면 중복 검사 없이 통과
     if (formData.nickname === originalNickname) {
       setNicknameValidation({
@@ -141,8 +161,53 @@ const UpdateProfile = () => {
     }
   };
 
+  // 소셜 타입에 따른 한글 이름 반환
+  const getSocialTypeName = (type) => {
+    switch(type) {
+      case 'GOOGLE': return '구글';
+      case 'NAVER': return '네이버';
+      case 'KAKAO': return '카카오';
+      default: return '소셜';
+    }
+  };
+
+  // 회원 탈퇴 처리 함수
+  const handleDeleteAccount = async () => {
+    // 소셜 계정과 로컬 계정에 따라 다른 확인 메시지 표시
+    const message = isSocialAccount
+      ? `${getSocialTypeName(socialType)} 계정 연동이 해제되고 회원정보가 삭제됩니다. 계속하시겠습니까?`
+      : "회원 탈퇴 시 모든 정보가 삭제되며 복구할 수 없습니다. 정말로 탈퇴하시겠습니까?";
+
+    if (window.confirm(message)) {
+      try {
+        // 회원 탈퇴 API 호출
+        await deleteMember();
+        
+        // 로컬 스토리지의 인증 정보 삭제 (로그아웃)
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("role");
+        
+        alert("회원 탈퇴가 완료되었습니다.");
+        
+        // 로그인 페이지로 이동
+        navigate("/login");
+      } catch (error) {
+        console.error("회원 탈퇴 오류:", error);
+        alert("회원 탈퇴 중 오류가 발생했습니다: " + 
+              (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // 소셜 계정인 경우 정보 수정 불가
+    if (isSocialAccount) {
+      alert("소셜 로그인 계정은 정보를 수정할 수 없습니다.");
+      return;
+    }
 
     // 닉네임 필수 검증
     if (!formData.nickname || !formData.birthDate || !formData.gender) {
@@ -242,7 +307,19 @@ const UpdateProfile = () => {
             <Col md={6}>
               <div className="signup-card">
                 <h2 className="mb-3">회원정보 수정</h2>
+                
+                {/* 소셜 계정인 경우 안내 메시지 표시 */}
+                {isSocialAccount && (
+                  <Alert variant="info" className="mb-3">
+                    <Alert.Heading>{getSocialTypeName(socialType)} 소셜 로그인 계정</Alert.Heading>
+                    <p>
+                      소셜 계정은 회원정보를 변경할 수 없습니다. 회원정보 수정이 필요한 경우 {getSocialTypeName(socialType)} 계정에서 관리하세요.
+                    </p>
+                  </Alert>
+                )}
+
                 <Form onSubmit={handleSubmit}>
+                  {/* 이메일 필드 - 소셜/로컬 계정 모두 수정 불가 */}
                   <Form.Group className="mb-3">
                     <Form.Label className="signup-form-label">이메일</Form.Label>
                     <Form.Control
@@ -257,33 +334,39 @@ const UpdateProfile = () => {
                     </Form.Text>
                   </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label className="signup-form-label">새 비밀번호</Form.Label>
-                    <Form.Control
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="변경할 비밀번호를 입력하세요 (선택사항)"
-                      className="signup-form-control"
-                    />
-                    <Form.Text className="text-muted">
-                      비밀번호를 변경하지 않으려면 빈칸으로 두세요.
-                    </Form.Text>
-                  </Form.Group>
+                  {/* 비밀번호 변경 필드 - 로컬 계정만 표시 */}
+                  {!isSocialAccount && (
+                    <>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="signup-form-label">새 비밀번호</Form.Label>
+                        <Form.Control
+                          type="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          placeholder="변경할 비밀번호를 입력하세요 (선택사항)"
+                          className="signup-form-control"
+                        />
+                        <Form.Text className="text-muted">
+                          비밀번호를 변경하지 않으려면 빈칸으로 두세요.
+                        </Form.Text>
+                      </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label className="signup-form-label">비밀번호 확인</Form.Label>
-                    <Form.Control
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="새 비밀번호를 다시 입력하세요"
-                      className="signup-form-control"
-                    />
-                  </Form.Group>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="signup-form-label">비밀번호 확인</Form.Label>
+                        <Form.Control
+                          type="password"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="새 비밀번호를 다시 입력하세요"
+                          className="signup-form-control"
+                        />
+                      </Form.Group>
+                    </>
+                  )}
 
+                  {/* 닉네임 필드 - 소셜 계정은 변경 불가 */}
                   <Form.Group className="mb-3">
                     <Form.Label className="signup-form-label">닉네임</Form.Label>
                     <div className="d-flex">
@@ -294,26 +377,35 @@ const UpdateProfile = () => {
                         onChange={handleNicknameChange}
                         className="signup-form-control"
                         style={{ flex: "1", minWidth: "0" }}
+                        disabled={isSocialAccount}
                         required
                       />
                       <Button 
                         variant="outline-primary" 
                         onClick={handleNicknameCheck}
                         style={{ width: "80px", marginLeft: "8px", whiteSpace: "nowrap" }}
+                        disabled={isSocialAccount}
                       >
                         중복확인
                       </Button>
                     </div>
-                    <Form.Text className="text-muted">
-                      닉네임은 3~20자의 영문, 숫자, 한글만 사용 가능합니다.
-                    </Form.Text>
-                    {nicknameValidation.checked && (
+                    {isSocialAccount ? (
+                      <Form.Text className="text-muted">
+                        소셜 계정은 닉네임을 변경할 수 없습니다.
+                      </Form.Text>
+                    ) : (
+                      <Form.Text className="text-muted">
+                        닉네임은 3~20자의 영문, 숫자, 한글만 사용 가능합니다.
+                      </Form.Text>
+                    )}
+                    {!isSocialAccount && nicknameValidation.checked && (
                       <div className={`mt-1 ${nicknameValidation.available ? 'text-success' : 'text-danger'}`}>
                         {nicknameValidation.available ? '✅ 사용 가능한 닉네임입니다.' : '❌ 이미 사용 중인 닉네임입니다.'}
                       </div>
                     )}
                   </Form.Group>
 
+                  {/* 생년월일 필드 - 소셜 계정은 변경 불가 */}
                   <Form.Group className="mb-3">
                     <Form.Label className="signup-form-label">생년월일</Form.Label>
                     <Form.Control
@@ -322,10 +414,17 @@ const UpdateProfile = () => {
                       value={formData.birthDate}
                       onChange={handleChange}
                       className="signup-form-control"
+                      disabled={isSocialAccount}
                       required
                     />
+                    {isSocialAccount && (
+                      <Form.Text className="text-muted">
+                        소셜 계정은 생년월일을 변경할 수 없습니다.
+                      </Form.Text>
+                    )}
                   </Form.Group>
 
+                  {/* 성별 필드 - 소셜 계정은 변경 불가 */}
                   <Form.Group className="mb-3">
                     <Form.Label>성별</Form.Label>
                     <ButtonGroup className="gender-button-group">
@@ -340,30 +439,38 @@ const UpdateProfile = () => {
                           checked={formData.gender === g}
                           onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                           className={`gender-button ${formData.gender === g ? "isActive" : ""}`}
+                          disabled={isSocialAccount}
                           required
                         >
                           {g}
                         </ToggleButton>
                       ))}
                     </ButtonGroup>
+                    {isSocialAccount && (
+                      <Form.Text className="text-muted d-block mt-2">
+                        소셜 계정은 성별을 변경할 수 없습니다.
+                      </Form.Text>
+                    )}
                   </Form.Group>
 
-                  <div className="d-flex justify-content-center mt-4">
+                  {/* 버튼 그룹 - 소셜 계정은 정보 수정 버튼 비활성화, 탈퇴 버튼은 활성화 */}
+                  <div className="d-flex justify-content-between mt-4">
                     <Button 
                       variant="primary" 
                       type="submit" 
-                      className="signup-btn-primary"
-                      style={{ width: "120px" }}
-                      disabled={formData.nickname !== originalNickname && (!nicknameValidation.checked || !nicknameValidation.available)}
+                      className="btn-primary"
+                      style={{ width: "45%" }}
+                      disabled={isSocialAccount || (formData.nickname !== originalNickname && (!nicknameValidation.checked || !nicknameValidation.available))}
                     >
                       정보 수정
                     </Button>
+                    
                     <Button 
-                      variant="secondary" 
-                      onClick={() => window.history.back()} 
-                      style={{ marginLeft: "20px", width: "120px" }}
+                      variant="danger" 
+                      onClick={handleDeleteAccount}
+                      style={{ width: "45%" }}
                     >
-                      취소
+                      회원 탈퇴
                     </Button>
                   </div>
                 </Form>

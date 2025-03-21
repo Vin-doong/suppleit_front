@@ -20,24 +20,8 @@ const NoticeBoardDetail = () => {
         const response = await getNoticeById(id);
         console.log("공지사항 상세 데이터:", response.data);
         
-        // 백엔드 응답 데이터 처리
-        const noticeData = response.data;
-        
-        // 필드명 매핑 처리
-        const processedNotice = {
-          id: noticeData.noticeId || noticeData.id || id,
-          title: noticeData.title || "제목 없음",
-          content: noticeData.content || "",
-          author: noticeData.authorName || "관리자",
-          views: noticeData.views || 0,
-          createdAt: noticeData.createdAt || new Date().toISOString(),
-          updatedAt: noticeData.updatedAt,
-          file: noticeData.attachmentPath 
-            ? `/api/notice/attachment/${noticeData.noticeId}/${noticeData.attachmentName}` 
-            : null
-        };
-        
-        setNotice(processedNotice);
+        // 원본 데이터 저장
+        setNotice(response.data);
         setLoading(false);
       } catch (error) {
         console.error("공지사항 조회 중 오류:", error);
@@ -86,8 +70,8 @@ const NoticeBoardDetail = () => {
           <h2 className="mb-4" style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{notice.title}</h2>
 
           <p className="text-muted">
-            <strong>작성자:</strong> {notice.author} | 
-            <strong>조회수:</strong> {notice.views} | 
+            <strong>작성자:</strong> {notice.authorName || "관리자"} | 
+            <strong>조회수:</strong> {notice.views || 0} | 
             <strong>작성일:</strong> {
               notice.createdAt 
                 ? new Date(notice.createdAt).toLocaleDateString() 
@@ -105,16 +89,43 @@ const NoticeBoardDetail = () => {
             dangerouslySetInnerHTML={{ __html: notice.content }} 
           />
 
-          {notice.file && (
+          {/* 첨부파일 표시 */}
+          {notice.attachmentPath && notice.attachmentName && (
             <div className="mt-4 p-3 border rounded bg-light d-flex align-items-center">
               <strong className="me-2">첨부 파일:</strong>
               <a 
-                href={notice.file} 
-                download 
-                style={{ textDecoration: "underline", color: "blue", cursor: "pointer" }}
+                href={`http://localhost:8000/api/notice/attachment/${notice.noticeId}/${encodeURIComponent(notice.attachmentName)}`}
+                download
+                className="text-primary"
+                style={{ textDecoration: "underline", cursor: "pointer" }}
               >
-                {decodeURIComponent(notice.file.split("/").pop())}
+                {notice.attachmentName}
               </a>
+            </div>
+          )}
+
+          {/* 이미지도 다운로드 링크 추가 */}
+          {notice.imagePath && (
+            <div className="mt-4">
+              <strong>첨부된 이미지:</strong>
+              <div className="mt-2">
+                <img 
+                  src={`http://localhost:8000/api/notice/image/${notice.imagePath}`}
+                  alt="첨부된 이미지" 
+                  className="img-fluid border rounded"
+                  style={{ maxWidth: "100%", maxHeight: "400px" }}
+                />
+                <div className="mt-2">
+                  <a 
+                    href={`http://localhost:8000/api/notice/image/${notice.imagePath}`}
+                    download
+                    className="text-primary"
+                    style={{ textDecoration: "underline" }}
+                  >
+                    이미지 다운로드
+                  </a>
+                </div>
+              </div>
             </div>
           )}
 

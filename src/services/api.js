@@ -32,7 +32,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     // 401 오류이고 재시도하지 않은 경우 리프레시 토큰으로 시도
-    if (error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
@@ -58,6 +58,7 @@ api.interceptors.response.use(
         // 리프레시 토큰도 만료된 경우 로그아웃 처리
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('role');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -94,6 +95,11 @@ export const updateMemberInfo = async (userData) => {
   return api.put("/member/update", userData);
 };
 
+// 회원 탈퇴 API
+export const deleteMember = async () => {
+  return api.delete("/member/delete");
+};
+
 export const checkEmail = async (email) => {
   return api.get(`/member/validation/email/${email}`);
 };
@@ -111,60 +117,111 @@ export const naverLogin = async (code, state) => {
   return api.post("/social/login/naver", { code, state });
 };
 
-// 공지사항 목록 조회
+// 공지사항 관련 API
 export const getNotices = async () => {
   return api.get("/notice");
 };
 
-// 특정 공지사항 조회
 export const getNoticeById = async (id) => {
-  return api.get(`/notice/${id}`);
+  console.log(`공지사항 상세 요청 시작: /notice/${id}`);
+  try {
+    const response = await api.get(`/notice/${id}`);
+    console.log("공지사항 상세 응답 성공:", response.status);
+    return response;
+  } catch (error) {
+    console.error("공지사항 상세 조회 오류:", error);
+    throw error;
+  }
 };
 
 // 공지사항 생성
 export const createNotice = async (noticeData) => {
-  const formData = new FormData();
-  formData.append('notice', new Blob([JSON.stringify({
-    title: noticeData.title,
-    content: noticeData.content
-  })], { type: 'application/json' }));
-  
-  if (noticeData.file) {
-    formData.append('image', noticeData.file);
-  }
-  
-  return api.post("/notice", formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
+  try {
+    console.log("공지사항 등록 시작", noticeData);
+    
+    const formData = new FormData();
+    
+    // notice 데이터를 JSON 문자열로 변환하여 Blob으로 추가
+    const noticeJson = JSON.stringify({
+      title: noticeData.title,
+      content: noticeData.content
+    });
+    
+    formData.append('notice', new Blob([noticeJson], { type: 'application/json' }));
+    
+    // 파일 처리
+    if (noticeData.file) {
+      // 이미지 파일인지 확인
+      if (noticeData.file.type.startsWith('image/')) {
+        formData.append('image', noticeData.file);
+        console.log("이미지 파일 업로드:", noticeData.file.name, noticeData.file.type);
+      } else {
+        formData.append('attachment', noticeData.file);
+        console.log("일반 첨부파일 업로드:", noticeData.file.name, noticeData.file.type);
+      }
     }
-  });
+    
+    const response = await api.post("/notice", formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    console.log("공지사항 등록 성공:", response);
+    return response;
+  } catch (error) {
+    console.error("공지사항 등록 실패:", error);
+    throw error;
+  }
 };
 
 // 공지사항 수정
 export const updateNotice = async (id, noticeData) => {
-  const formData = new FormData();
-  formData.append('notice', new Blob([JSON.stringify({
-    title: noticeData.title,
-    content: noticeData.content
-  })], { type: 'application/json' }));
-  
-  if (noticeData.file) {
-    formData.append('image', noticeData.file);
-  }
-  
-  return api.put(`/notice/${id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
+  try {
+    console.log("공지사항 수정 시작", id, noticeData);
+    
+    const formData = new FormData();
+    
+    // notice 데이터를 JSON 문자열로 변환하여 Blob으로 추가
+    const noticeJson = JSON.stringify({
+      title: noticeData.title,
+      content: noticeData.content,
+      removeAttachment: noticeData.removeAttachment || false
+    });
+    
+    formData.append('notice', new Blob([noticeJson], { type: 'application/json' }));
+    
+    // 파일 처리
+    if (noticeData.file) {
+      // 이미지 파일인지 확인
+      if (noticeData.file.type.startsWith('image/')) {
+        formData.append('image', noticeData.file);
+        console.log("이미지 파일 업로드:", noticeData.file.name, noticeData.file.type);
+      } else {
+        formData.append('attachment', noticeData.file);
+        console.log("일반 첨부파일 업로드:", noticeData.file.name, noticeData.file.type);
+      }
     }
-  });
+    
+    const response = await api.put(`/notice/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    console.log("공지사항 수정 성공:", response);
+    return response;
+  } catch (error) {
+    console.error("공지사항 수정 실패:", error);
+    throw error;
+  }
 };
 
-// 공지사항 삭제
 export const deleteNotice = async (id) => {
   return api.delete(`/notice/${id}`);
 };
 
-// 제품 리스트 가져오기
+// 제품 관련 API
 export const getProducts = async () => {
   return api.get("/products");
 };
