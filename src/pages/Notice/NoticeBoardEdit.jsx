@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Card, Button, Form } from "react-bootstrap";
 import ReactQuill from "react-quill-new";
@@ -21,6 +21,9 @@ const NoticeBoardEdit = () => {
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImage, setPreviewImage] = useState(null); // 이미지 미리보기 URL
+  
+  // Quill 에디터 참조 추가
+  const quillRef = useRef(null);
 
   useEffect(() => {
     const checkUserRole = () => {
@@ -90,6 +93,44 @@ const NoticeBoardEdit = () => {
     // 화면에서만 제거하고 실제 삭제는 저장 시 처리
   };
 
+  // 이미지 업로드 핸들러 추가 - 에디터 내 이미지 삽입 기능
+  const handleImageUpload = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = () => {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // 이미지 파일 검증
+        if (!file.type.startsWith('image/')) {
+          alert('이미지 파일만 업로드할 수 있습니다.');
+          return;
+        }
+        
+        // 임시 URL 생성 (미리보기용)
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Quill 에디터에 이미지 삽입
+          const quill = quillRef.current.getEditor();
+          const range = quill.getSelection(true);
+          
+          // 현재 커서 위치에 이미지 삽입
+          quill.insertEmbed(range.index, 'image', reader.result);
+          
+          // 커서를 이미지 다음으로 이동
+          quill.setSelection(range.index + 1);
+          
+          // 에디터 내용 상태 업데이트
+          setContent(quillRef.current.getEditor().root.innerHTML);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  };
+
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       alert("제목과 내용을 입력하세요!");
@@ -123,7 +164,7 @@ const NoticeBoardEdit = () => {
     }
   };
 
-  // ReactQuill 모듈 설정 - 중복 툴바 방지
+  // ReactQuill 모듈 설정 - 에디터 내 이미지 삽입 기능 추가
   const modules = {
     toolbar: {
       container: [
@@ -133,6 +174,9 @@ const NoticeBoardEdit = () => {
         [{ list: 'ordered' }, { list: 'bullet' }],
         ['clean']
       ],
+      handlers: {
+        image: handleImageUpload // 이미지 핸들러 연결
+      }
     }
   };
 
@@ -178,6 +222,7 @@ const NoticeBoardEdit = () => {
           <Form.Group className="mb-3">
             <Form.Label>내용</Form.Label>
             <ReactQuill 
+              ref={quillRef} // Quill 에디터 참조 추가
               theme="snow" 
               value={content} 
               onChange={setContent} 
@@ -186,6 +231,10 @@ const NoticeBoardEdit = () => {
               placeholder="공지사항 내용을 입력하세요"
               style={{ minHeight: "250px", marginBottom: "50px" }}
             />
+            <p className="text-muted mt-2">
+              <i className="fas fa-info-circle me-1"></i>
+              툴바의 이미지 아이콘을 클릭하여 본문에 이미지를 삽입할 수 있습니다.
+            </p>
           </Form.Group>
 
           {/* 파일 업로드 필드 */}

@@ -129,12 +129,74 @@ export const getNoticeById = async (id) => {
   }
 };
 
+// 본문에서 Base64 이미지 추출 및 파일로 변환하는 함수
+function extractBase64Images(htmlContent) {
+  if (!htmlContent) return { content: htmlContent, extractedImages: [] };
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const images = doc.querySelectorAll('img');
+  const extractedImages = [];
+  
+  // 이미지가 없으면 원본 반환
+  if (images.length === 0) {
+    return { content: htmlContent, extractedImages: [] };
+  }
+  
+  // 각 이미지를 처리
+  images.forEach((img, index) => {
+    const src = img.getAttribute('src');
+    
+    // base64 이미지인 경우만 처리
+    if (src && src.startsWith('data:image/')) {
+      // 이미지 유형과 데이터 추출
+      const matches = src.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      
+      if (matches && matches.length === 3) {
+        const imageType = matches[1];
+        const base64Data = matches[2];
+        const byteString = atob(base64Data);
+        
+        // ArrayBuffer 생성
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        
+        // Blob 생성 후 File 객체로 변환
+        const blob = new Blob([ab], { type: `image/${imageType}` });
+        const fileName = `inline-image-${index + 1}.${imageType}`;
+        const file = new File([blob], fileName, { type: `image/${imageType}` });
+        
+        extractedImages.push(file);
+        
+        // 이미지 src를 임시 플레이스홀더로 변경 (서버에서 실제 URL로 교체될 것)
+        img.setAttribute('src', `{{IMAGE_PLACEHOLDER_${index}}}`);
+      }
+    }
+  });
+  
+  // 변경된 HTML과 추출된 이미지 파일 반환
+  return {
+    content: doc.body.innerHTML,
+    extractedImages
+  };
+}
+
 // 공지사항 생성 - FormData 처리 개선
 export const createNotice = async (noticeData) => {
   try {
     console.log("공지사항 등록 시작", noticeData);
     
     const formData = new FormData();
+    
+    // Base64 이미지를 추출하여 파일로 변환
+    const { content, extractedImages } = extractBase64Images(noticeData.content);
+    
+    // 업데이트된 컨텐츠 (이미지 플레이스홀더가 있는)
+    noticeData.content = content;
     
     // notice 데이터를 JSON 문자열로 변환하여 Blob으로 추가
     const noticeJson = JSON.stringify({
@@ -154,6 +216,14 @@ export const createNotice = async (noticeData) => {
         formData.append('attachment', noticeData.file);
         console.log("일반 첨부파일 업로드:", noticeData.file.name, noticeData.file.type);
       }
+    }
+    
+    // 본문 내 추출된 이미지들 처리
+    if (extractedImages && extractedImages.length > 0) {
+      extractedImages.forEach((imgFile, index) => {
+        formData.append('contentImages', imgFile);
+        console.log(`본문 이미지 ${index + 1} 업로드:`, imgFile.name);
+      });
     }
     
     const response = await api.post("/notice", formData, {
@@ -177,6 +247,12 @@ export const updateNotice = async (id, noticeData) => {
     
     const formData = new FormData();
     
+    // Base64 이미지를 추출하여 파일로 변환
+    const { content, extractedImages } = extractBase64Images(noticeData.content);
+    
+    // 업데이트된 컨텐츠 (이미지 플레이스홀더가 있는)
+    noticeData.content = content;
+    
     // notice 데이터를 JSON 문자열로 변환하여 Blob으로 추가
     const noticeJson = JSON.stringify({
       title: noticeData.title,
@@ -197,6 +273,14 @@ export const updateNotice = async (id, noticeData) => {
         formData.append('attachment', noticeData.file);
         console.log("일반 첨부파일 업로드:", noticeData.file.name, noticeData.file.type);
       }
+    }
+    
+    // 본문 내 추출된 이미지들 처리
+    if (extractedImages && extractedImages.length > 0) {
+      extractedImages.forEach((imgFile, index) => {
+        formData.append('contentImages', imgFile);
+        console.log(`본문 이미지 ${index + 1} 업로드:`, imgFile.name);
+      });
     }
     
     const response = await api.put(`/notice/${id}`, formData, {
