@@ -1,3 +1,4 @@
+// src/services/api.js
 import axios from 'axios';
 
 // 백엔드 API 기본 URL 설정
@@ -70,13 +71,7 @@ api.interceptors.response.use(
 
 // 회원 인증 관련 API
 export const login = async (email, password) => {
-  try {
-    const response = await api.post("/auth/login", { email, password });
-    return response.data;
-  } catch (error) {
-    console.error("로그인 API 오류:", error);
-    throw error;
-  }
+  return api.post("/auth/login", { email, password });
 };
 
 export const logout = async () => {
@@ -134,7 +129,7 @@ export const getNoticeById = async (id) => {
   }
 };
 
-// 공지사항 생성
+// 공지사항 생성 - FormData 처리 개선
 export const createNotice = async (noticeData) => {
   try {
     console.log("공지사항 등록 시작", noticeData);
@@ -151,7 +146,7 @@ export const createNotice = async (noticeData) => {
     
     // 파일 처리
     if (noticeData.file) {
-      // 이미지 파일인지 확인
+      // 이미지 파일인지 확인 - MIME 타입으로 판단
       if (noticeData.file.type.startsWith('image/')) {
         formData.append('image', noticeData.file);
         console.log("이미지 파일 업로드:", noticeData.file.name, noticeData.file.type);
@@ -175,7 +170,7 @@ export const createNotice = async (noticeData) => {
   }
 };
 
-// 공지사항 수정
+// 공지사항 수정 - FormData 처리 개선
 export const updateNotice = async (id, noticeData) => {
   try {
     console.log("공지사항 수정 시작", id, noticeData);
@@ -186,14 +181,15 @@ export const updateNotice = async (id, noticeData) => {
     const noticeJson = JSON.stringify({
       title: noticeData.title,
       content: noticeData.content,
-      removeAttachment: noticeData.removeAttachment || false
+      removeAttachment: noticeData.removeAttachment || false,
+      removeImage: noticeData.removeImage || false
     });
     
     formData.append('notice', new Blob([noticeJson], { type: 'application/json' }));
     
     // 파일 처리
     if (noticeData.file) {
-      // 이미지 파일인지 확인
+      // 이미지 파일인지 확인 - MIME 타입으로 판단
       if (noticeData.file.type.startsWith('image/')) {
         formData.append('image', noticeData.file);
         console.log("이미지 파일 업로드:", noticeData.file.name, noticeData.file.type);
@@ -219,6 +215,15 @@ export const updateNotice = async (id, noticeData) => {
 
 export const deleteNotice = async (id) => {
   return api.delete(`/notice/${id}`);
+};
+
+// 파일 다운로드 헬퍼 함수
+export const getFileDownloadUrl = (noticeId, fileName) => {
+  return `${API_BASE_URL}/notice/attachment/${noticeId}/${encodeURIComponent(fileName)}`;
+};
+
+export const getImageUrl = (imagePath) => {
+  return `${API_BASE_URL}/notice/image/${imagePath}`;
 };
 
 // 제품 관련 API

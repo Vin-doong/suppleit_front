@@ -12,8 +12,9 @@ const NoticeBoardInsert = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
-  const [fileType, setFileType] = useState(""); // 파일 타입 추적을 위한 상태 추가
+  const [fileType, setFileType] = useState(""); // 파일 타입 추적을 위한 상태
   const [isSubmitting, setIsSubmitting] = useState(false); // 제출 중 상태 추적
+  const [previewImage, setPreviewImage] = useState(null); // 이미지 미리보기
 
   useEffect(() => {
     const checkUserRole = () => {
@@ -35,8 +36,31 @@ const NoticeBoardInsert = () => {
     if (selectedFile) {
       setFile(selectedFile);
       setFileType(selectedFile.type);
+      
+      // 이미지 파일인 경우 미리보기 생성
+      if (selectedFile.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewImage(reader.result);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        setPreviewImage(null); // 이미지가 아닌 경우 미리보기 제거
+      }
+      
       console.log("선택된 파일 타입:", selectedFile.type);
+    } else {
+      setFile(null);
+      setFileType("");
+      setPreviewImage(null);
     }
+  };
+
+  // 파일 제거 핸들러
+  const handleRemoveFile = () => {
+    setFile(null);
+    setFileType("");
+    setPreviewImage(null);
   };
 
   const handleSubmit = async (e) => {
@@ -61,13 +85,22 @@ const NoticeBoardInsert = () => {
         file
       };
 
-      await createNotice(noticeData);
+      // 여기서 이미지인지 일반 첨부파일인지 판단하지 않고, 서버로 전송
+      // 서버에서 파일 유형에 따라 적절히 처리
+      const response = await createNotice(noticeData);
       
       alert("공지사항이 성공적으로 등록되었습니다.");
-      navigate("/notices");
+      
+      // 성공 시 새로 생성된 공지사항 상세 페이지로 이동
+      if (response.data && response.data.noticeId) {
+        navigate(`/notices/${response.data.noticeId}`);
+      } else {
+        navigate("/notices"); // ID가 없으면 목록으로 이동
+      }
     } catch (error) {
       console.error("공지사항 등록 중 오류:", error);
-      alert("공지사항 등록 중 오류가 발생했습니다.");
+      alert("공지사항 등록 중 오류가 발생했습니다: " + 
+            (error.response?.data?.message || error.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -118,7 +151,7 @@ const NoticeBoardInsert = () => {
 
               <Form.Group className="mb-3">
                 <Form.Label>내용</Form.Label>
-                <div style={{ border: "none", borderRadius: "5px", padding: "5px", minHeight: "300px" }}>
+                <div style={{ minHeight: "300px" }}>
                   <ReactQuill 
                     theme="snow" 
                     value={content}  
@@ -131,16 +164,40 @@ const NoticeBoardInsert = () => {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>첨부 파일</Form.Label>
+                <Form.Label>파일 첨부 (이미지 또는 첨부파일)</Form.Label>
                 <Form.Control type="file" onChange={handleFileChange} />
                 {file && (
-                  <div className="mt-2 text-muted">
-                    {fileType.startsWith('image/') 
-                      ? `선택된 이미지: ${file.name}` 
-                      : `선택된 파일: ${file.name}`}
+                  <div className="mt-2 d-flex align-items-center">
+                    <span className="text-muted me-2">
+                      {fileType.startsWith('image/') 
+                        ? `선택된 이미지: ${file.name}` 
+                        : `선택된 파일: ${file.name}`}
+                    </span>
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={handleRemoveFile}
+                    >
+                      제거
+                    </Button>
                   </div>
                 )}
               </Form.Group>
+
+              {/* 이미지 미리보기 */}
+              {previewImage && (
+                <Form.Group className="mb-3">
+                  <Form.Label>이미지 미리보기</Form.Label>
+                  <div>
+                    <img 
+                      src={previewImage} 
+                      alt="이미지 미리보기" 
+                      style={{ maxWidth: "300px", maxHeight: "200px" }} 
+                      className="border rounded"
+                    />
+                  </div>
+                </Form.Group>
+              )}
 
               <div className="d-flex justify-content-end">
                 <Button 
@@ -154,7 +211,7 @@ const NoticeBoardInsert = () => {
                 <Button 
                   style={{ backgroundColor: "#2A9D8F", color: "white", border: "none" }} 
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !title.trim() || !content.trim()}
                 >
                   {isSubmitting ? "등록 중..." : "등록"}
                 </Button>

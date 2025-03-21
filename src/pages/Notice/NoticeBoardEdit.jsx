@@ -15,10 +15,12 @@ const NoticeBoardEdit = () => {
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
   const [fileType, setFileType] = useState("");
-  const [removeExistingFile, setRemoveExistingFile] = useState(false);
+  const [removeExistingFile, setRemoveExistingFile] = useState(false); // 첨부파일 제거 플래그
+  const [removeExistingImage, setRemoveExistingImage] = useState(false); // 이미지 제거 플래그
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // 이미지 미리보기 URL
 
   useEffect(() => {
     const checkUserRole = () => {
@@ -57,13 +59,35 @@ const NoticeBoardEdit = () => {
     if (selectedFile) {
       setFile(selectedFile);
       setFileType(selectedFile.type);
-      console.log("선택된 파일 타입:", selectedFile.type);
+      
+      // 이미지인 경우 미리보기 설정
+      if (selectedFile.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewImage(reader.result);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        setPreviewImage(null);
+      }
+      
+      console.log("선택된 파일:", selectedFile.name, "타입:", selectedFile.type);
+    } else {
+      setPreviewImage(null);
     }
   };
 
-  // 기존 파일 제거 핸들러
+  // 기존 첨부파일 제거 핸들러
   const handleRemoveFile = () => {
     setRemoveExistingFile(true);
+    // 화면에서만 제거하고 실제 삭제는 저장 시 처리
+  };
+
+  // 기존 이미지 제거 핸들러
+  const handleRemoveImage = () => {
+    setRemoveExistingImage(true);
+    setPreviewImage(null);
+    // 화면에서만 제거하고 실제 삭제는 저장 시 처리
   };
 
   const handleSave = async () => {
@@ -84,7 +108,8 @@ const NoticeBoardEdit = () => {
         title,
         content,
         file,
-        removeAttachment: removeExistingFile
+        removeAttachment: removeExistingFile,
+        removeImage: removeExistingImage
       };
 
       await updateNotice(id, noticeData);
@@ -122,6 +147,13 @@ const NoticeBoardEdit = () => {
   if (error) return <div>{error}</div>;
   if (!isAdmin) return null;
 
+  // 이미지 미리보기 URL 결정
+  const imageUrl = previewImage ? 
+    previewImage : 
+    (notice?.imagePath && !removeExistingImage ? 
+      `http://localhost:8000/api/notice/image/${notice.imagePath}` : 
+      null);
+
   return (
     <>
       <Header />
@@ -152,12 +184,13 @@ const NoticeBoardEdit = () => {
               modules={modules} 
               formats={formats}
               placeholder="공지사항 내용을 입력하세요"
+              style={{ minHeight: "250px", marginBottom: "50px" }}
             />
           </Form.Group>
 
           {/* 파일 업로드 필드 */}
           <Form.Group className="mb-3">
-            <Form.Label>첨부 파일</Form.Label>
+            <Form.Label>파일 업로드 (이미지 또는 첨부파일)</Form.Label>
             <Form.Control 
               type="file" 
               onChange={handleFileChange} 
@@ -169,34 +202,16 @@ const NoticeBoardEdit = () => {
                   : `새로 선택된 파일: ${file.name}`}
               </div>
             )}
-            {/* 기존 파일 표시 및 제거 버튼 */}
-            {notice.attachmentName && !removeExistingFile && (
-              <div className="mt-2 d-flex align-items-center">
-                <span className="text-muted me-2">현재 파일: {notice.attachmentName}</span>
-                <Button 
-                  variant="outline-danger" 
-                  size="sm" 
-                  onClick={handleRemoveFile}
-                >
-                  제거
-                </Button>
-              </div>
-            )}
-            {removeExistingFile && (
-              <div className="mt-2 text-danger">
-                파일이 제거됩니다.
-              </div>
-            )}
           </Form.Group>
 
           {/* 이미지 미리보기 (있는 경우) */}
-          {notice.imagePath && !removeExistingFile && (
+          {imageUrl && (
             <Form.Group className="mb-3">
-              <Form.Label>현재 이미지</Form.Label>
+              <Form.Label>이미지 미리보기</Form.Label>
               <div>
                 <img 
-                  src={`/api/notice/image/${notice.imagePath}`}
-                  alt="현재 이미지" 
+                  src={imageUrl}
+                  alt="이미지 미리보기" 
                   style={{ maxWidth: "300px", maxHeight: "200px" }} 
                   className="border rounded"
                 />
@@ -204,7 +219,7 @@ const NoticeBoardEdit = () => {
                   variant="outline-danger" 
                   size="sm" 
                   className="ml-2 d-block mt-2"
-                  onClick={handleRemoveFile}
+                  onClick={handleRemoveImage}
                 >
                   이미지 제거
                 </Button>
@@ -212,8 +227,37 @@ const NoticeBoardEdit = () => {
             </Form.Group>
           )}
 
+          {/* 기존 첨부파일 정보 표시 및 제거 버튼 */}
+          {notice?.attachmentPath && !removeExistingFile && (
+            <Form.Group className="mb-3">
+              <Form.Label>현재 첨부파일</Form.Label>
+              <div className="d-flex align-items-center">
+                <a 
+                  href={`http://localhost:8000/api/notice/attachment/${notice.noticeId}/${encodeURIComponent(notice.attachmentName)}`}
+                  className="text-primary me-2" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  {notice.attachmentName}
+                </a>
+                <Button 
+                  variant="outline-danger" 
+                  size="sm"
+                  onClick={handleRemoveFile}
+                >
+                  첨부파일 제거
+                </Button>
+              </div>
+              {removeExistingFile && (
+                <div className="mt-2 text-danger">
+                  첨부파일이 제거됩니다.
+                </div>
+              )}
+            </Form.Group>
+          )}
+
           {/* 버튼 그룹 */}
-          <div className="d-flex justify-content-end">
+          <div className="d-flex justify-content-end mt-4">
             <Button 
               variant="secondary" 
               className="me-2" 
